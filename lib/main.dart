@@ -5,6 +5,7 @@ import 'core/auth/auth_service.dart';
 import 'features/reports/providers/reports_provider.dart';
 import 'features/admin/providers/user_provider.dart';
 import 'features/auth/login_screen.dart';
+import 'core/theme/app_theme.dart';
 
 void main() {
   // Initialize FFI
@@ -27,10 +28,8 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'BARCF Reports',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        ),
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
         home: const LoginScreen(),
       ),
     );

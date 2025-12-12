@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/auth/auth_service.dart';
 import '../models/issue_model.dart';
-
 import '../providers/reports_provider.dart';
 import 'package:intl/intl.dart';
 
@@ -26,6 +25,7 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
 
   bool _isIssueSorted = false;
   DateTime _selectedDate = DateTime.now();
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -44,8 +44,10 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
     _selectedDate = widget.issue?.date ?? DateTime.now();
   }
 
-  Future<void> _saveCategory() async {
+  Future<void> _saveIssue() async {
     if (_formKey.currentState!.validate()) {
+      setState(() => _isSaving = true);
+
       final user = Provider.of<AuthService>(context, listen: false).currentUser;
       if (user == null) return;
 
@@ -92,71 +94,192 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Text(widget.issue == null ? 'New Issue' : 'Edit Issue')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _snoController,
-                decoration: const InputDecoration(labelText: 'S.No'),
-                keyboardType: TextInputType.number,
+        title: Text(widget.issue == null ? 'New Issue' : 'Edit Issue'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 600),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A24),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.06)),
+            ),
+            padding: const EdgeInsets.all(32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Section Header
+                  const Text(
+                    'Issue Details',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Fill in the information below to ${widget.issue == null ? 'create a new' : 'update the'} issue.',
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Form Fields
+                  _buildLabel('S.No (Optional)'),
+                  TextFormField(
+                    controller: _snoController,
+                    decoration:
+                        const InputDecoration(hintText: 'Enter serial number'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildLabel('Name *'),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(hintText: 'Enter name'),
+                    validator: (val) => val!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildLabel('Employee No *'),
+                  TextFormField(
+                    controller: _empNoController,
+                    decoration: const InputDecoration(
+                        hintText: 'Enter employee number'),
+                    validator: (val) => val!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildLabel('Problem *'),
+                  TextFormField(
+                    controller: _problemController,
+                    decoration:
+                        const InputDecoration(hintText: 'Describe the problem'),
+                    maxLines: 3,
+                    validator: (val) => val!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildLabel('Materials Replaced'),
+                  TextFormField(
+                    controller: _materialsController,
+                    decoration: const InputDecoration(
+                        hintText: 'List materials replaced (if any)'),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildLabel('Attended By *'),
+                  TextFormField(
+                    controller: _attendedByController,
+                    decoration: const InputDecoration(
+                        hintText: 'Enter name of attendee'),
+                    validator: (val) => val!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildLabel('Date'),
+                  InkWell(
+                    onTap: _pickDate,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF242432),
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.08)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today,
+                              color: Colors.grey.shade400, size: 20),
+                          const SizedBox(width: 12),
+                          Text(
+                            DateFormat('MMMM dd, yyyy').format(_selectedDate),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const Spacer(),
+                          Icon(Icons.arrow_drop_down,
+                              color: Colors.grey.shade400),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Status Toggle
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF242432),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Issue Resolved',
+                          style: TextStyle(color: Colors.white)),
+                      subtitle: Text(
+                        _isIssueSorted
+                            ? 'This issue has been sorted'
+                            : 'This issue is still pending',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12),
+                      ),
+                      value: _isIssueSorted,
+                      onChanged: (val) => setState(() => _isIssueSorted = val),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: FilledButton(
+                      onPressed: _isSaving ? null : _saveIssue,
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              widget.issue == null
+                                  ? 'Create Issue'
+                                  : 'Update Issue',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (val) => val!.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _empNoController,
-                decoration: const InputDecoration(labelText: 'Emp No'),
-                validator: (val) => val!.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _problemController,
-                decoration: const InputDecoration(labelText: 'Problem'),
-                maxLines: 3,
-                validator: (val) => val!.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Is Issue Sorted?'),
-                value: _isIssueSorted,
-                onChanged: (val) => setState(() => _isIssueSorted = val),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _materialsController,
-                decoration:
-                    const InputDecoration(labelText: 'Materials Replaced'),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _attendedByController,
-                decoration: const InputDecoration(labelText: 'Attended By'),
-                validator: (val) => val!.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Date'),
-                subtitle: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: _pickDate,
-              ),
-              const SizedBox(height: 32),
-              FilledButton(
-                onPressed: _saveCategory,
-                child: Text(
-                    widget.issue == null ? 'Create Issue' : 'Update Issue'),
-              ),
-            ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.grey.shade400,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
