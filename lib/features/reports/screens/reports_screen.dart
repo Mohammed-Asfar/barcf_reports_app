@@ -298,20 +298,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child:
-                      const Icon(Icons.article, color: Colors.white, size: 20),
+                Image.asset(
+                  'assets/icon.png',
+                  width: 50,
+                  height: 50,
                 ),
                 const SizedBox(width: 12),
                 const Text(
-                  'BARCF',
+                  'BARCF Reports',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
