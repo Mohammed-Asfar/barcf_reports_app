@@ -29,38 +29,7 @@ class MyApp extends StatelessWidget {
         title: 'BARCF Reports',
         theme: ThemeData(
           useMaterial3: true,
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF0F172A),
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF0D9488),
-            secondary: Color(0xFF14B8A6),
-            surface: Color(0xFF1E293B),
-            onSurface: Colors.white,
-            // background: Color(0xFF0F172A), // Deprecated in recent Flutter, scaffoldBackgroundColor handles it
-          ),
-          cardColor: const Color(0xFF1E293B),
-          fontFamily:
-              'Roboto', // Default fall back, or use Google Fonts if package added
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
-            hintStyle: const TextStyle(color: Colors.grey),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D9488),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         ),
         home: const LoginScreen(),
       ),

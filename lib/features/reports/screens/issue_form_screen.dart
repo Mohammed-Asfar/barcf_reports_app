@@ -91,296 +91,74 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Background handled by theme
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 1000),
-          padding: const EdgeInsets.all(32),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header & Action
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      widget.issue == null ? 'Create Report' : 'Edit Report',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                    ),
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor:
-                            const Color(0xFF111827), // Darker button
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 16),
-                      ),
-                      onPressed:
-                          _saveCategory, // Should probably be "Preview" to match UI but let's just save for now
-                      child: const Text('Save Report'), // Or 'Preview'
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 48),
-
-                // Stepper Visual
-                Row(
-                  children: [
-                    _StepIndicator(
-                        number: '1',
-                        label: 'Details',
-                        subLabel: 'Enter Report details',
-                        isActive: true),
-                    Expanded(
-                      child: Container(
-                        height: 2,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.5),
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                    ),
-                    _StepIndicator(
-                        number: '2',
-                        label: 'Preview',
-                        subLabel: 'Preview and Print',
-                        isActive: false),
-                  ],
-                ),
-                const SizedBox(height: 48),
-
-                // Content Scrollable
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Report Details Section
-                        _SectionHeader(title: 'Report Details'),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                                child: _ModernInput(
-                                    controller: _snoController,
-                                    label: 'Report Number',
-                                    icon: Icons.numbers)),
-                            const SizedBox(width: 24),
-                            // Date Picker Mock-up Input
-                            Expanded(
-                              child: InkWell(
-                                onTap: _pickDate,
-                                child: IgnorePointer(
-                                  child: _ModernInput(
-                                    controller: TextEditingController(
-                                        text: DateFormat('yyyy-MM-dd')
-                                            .format(_selectedDate)),
-                                    label: 'Issued Date',
-                                    icon: Icons.calendar_today,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Employee Details Section
-                        _SectionHeader(title: 'Employee Details'),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                                child: _ModernInput(
-                                    controller: _nameController,
-                                    label: 'Employee Name',
-                                    icon: Icons.person)),
-                            const SizedBox(width: 24),
-                            Expanded(
-                                child: _ModernInput(
-                                    controller: _empNoController,
-                                    label: 'Employee No.',
-                                    icon: Icons.badge)),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Problem Section
-                        _SectionHeader(title: 'Problem Description'),
-                        const SizedBox(height: 16),
-                        _ModernInput(
-                            controller: _problemController,
-                            label: 'Problem',
-                            icon: Icons.report_problem,
-                            maxLines: 3),
-
-                        const SizedBox(height: 32),
-
-                        // Action/Status Section
-                        _SectionHeader(title: 'Resolution Details'),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                                child: _ModernInput(
-                                    controller: _attendedByController,
-                                    label: 'Attended By',
-                                    icon: Icons.engineering)),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: const Text('Is Sorted?',
-                                      style: TextStyle(
-                                          color: Colors.black87,
-                                          fontWeight: FontWeight.bold)),
-                                  value: _isIssueSorted,
-                                  activeColor:
-                                      Theme.of(context).colorScheme.primary,
-                                  onChanged: (val) =>
-                                      setState(() => _isIssueSorted = val),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _ModernInput(
-                            controller: _materialsController,
-                            label: 'Materials Replaced',
-                            icon: Icons.build),
-
-                        const SizedBox(height: 64),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      appBar: AppBar(
+          title: Text(widget.issue == null ? 'New Issue' : 'Edit Issue')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _snoController,
+                decoration: const InputDecoration(labelText: 'S.No'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+                validator: (val) => val!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _empNoController,
+                decoration: const InputDecoration(labelText: 'Emp No'),
+                validator: (val) => val!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _problemController,
+                decoration: const InputDecoration(labelText: 'Problem'),
+                maxLines: 3,
+                validator: (val) => val!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                title: const Text('Is Issue Sorted?'),
+                value: _isIssueSorted,
+                onChanged: (val) => setState(() => _isIssueSorted = val),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _materialsController,
+                decoration:
+                    const InputDecoration(labelText: 'Materials Replaced'),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _attendedByController,
+                decoration: const InputDecoration(labelText: 'Attended By'),
+                validator: (val) => val!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Date'),
+                subtitle: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: _pickDate,
+              ),
+              const SizedBox(height: 32),
+              FilledButton(
+                onPressed: _saveCategory,
+                child: Text(
+                    widget.issue == null ? 'Create Issue' : 'Update Issue'),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-}
-
-// Helper Widgets for modern look
-class _StepIndicator extends StatelessWidget {
-  final String number;
-  final String label;
-  final String subLabel;
-  final bool isActive;
-
-  const _StepIndicator(
-      {required this.number,
-      required this.label,
-      required this.subLabel,
-      required this.isActive});
-
-  @override
-  Widget build(BuildContext context) {
-    final color =
-        isActive ? Theme.of(context).colorScheme.primary : Colors.grey;
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isActive ? color : Colors.transparent,
-            border: Border.all(color: color, width: 2),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(number,
-                style: TextStyle(
-                    color: isActive ? Colors.white : color,
-                    fontWeight: FontWeight.bold)),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16)),
-            Text(subLabel,
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader({required this.title});
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-          color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-    );
-  }
-}
-
-class _ModernInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final IconData icon;
-  final int maxLines;
-
-  const _ModernInput(
-      {required this.controller,
-      required this.label,
-      required this.icon,
-      this.maxLines = 1});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: Colors.white70, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          style: const TextStyle(color: Colors.black87),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Colors.grey),
-            hintText: label,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-          validator: (val) => val != null && val.isEmpty ? 'Required' : null,
-        ),
-      ],
     );
   }
 }

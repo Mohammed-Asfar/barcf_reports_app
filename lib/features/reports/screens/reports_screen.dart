@@ -60,329 +60,187 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }).toList();
 
     return Scaffold(
-      body: Row(
-        children: [
-          // SIDEBAR (Permanent on Desktop)
-          Container(
-            width: 250,
-            color: const Color(0xFF0F172A), // Dark Navy
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      radius: 20,
-                      child: const Text('BR',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'BARCF Reports',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                    ),
-                    const Icon(Icons.chevron_left, color: Colors.white54),
-                  ],
-                ),
-                const SizedBox(height: 48),
-
-                // Main Menu
-                const Text('Main',
-                    style: TextStyle(color: Colors.white54, fontSize: 12)),
-                const SizedBox(height: 16),
-                _SidebarItem(
-                  icon: Icons.dashboard,
-                  label: 'Dashboard',
-                  isSelected: true, // Currently on Dashboard
-                  onTap: () {},
-                ),
-                _SidebarItem(
-                  icon: Icons.receipt,
-                  label: 'All Reports',
-                  onTap: () {},
-                ),
-                _SidebarItem(
-                  icon: Icons.description,
-                  label: 'My Reports',
-                  onTap: () {},
-                ),
-
-                const Spacer(),
-
-                // Other
-                const Text('Other',
-                    style: TextStyle(color: Colors.white54, fontSize: 12)),
-                const SizedBox(height: 16),
-                if (user.role == 'superadmin' || user.role == 'admin')
-                  _SidebarItem(
-                    icon: Icons.settings,
-                    label: 'User Management',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const UserManagementScreen()),
-                      );
-                    },
-                  ),
-
-                const SizedBox(height: 24),
-                _SidebarItem(
-                  icon: Icons.logout,
-                  label: 'Logout',
-                  color: Colors.white70,
-                  onTap: () {
-                    authProvider.logout();
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                          builder: (context) => const LoginScreenStub()),
-                    );
-                  },
-                ),
-              ],
-            ),
+      appBar: AppBar(
+        title: Text('BARCF Reports - ${user.username} (${user.role})'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadIssues,
+            tooltip: 'Refresh',
           ),
-
-          // MAIN CONTENT
-          Expanded(
-            child: Container(
-              color: const Color(
-                  0xFF111827), // Slightly different dark for main area or same? Screenshot looks same-ish or deep teal/green gradient?
-              // Screenshot "Dashboard" matches Sidebar background. "Create Invoice" page has dark green background.
-              // Let's stick to theme background.
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    // Top Bar / Search
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              style: const TextStyle(color: Colors.black87),
-                              decoration: const InputDecoration(
-                                hintText: 'Search by report number or name...',
-                                border: InputBorder.none,
-                                prefixIcon:
-                                    Icon(Icons.search, color: Colors.grey),
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 14),
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  _searchQuery = value;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Actions
-                        IconButton(
-                          style: IconButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E293B)),
-                          icon: const Icon(Icons.refresh, color: Colors.white),
-                          onPressed: _loadIssues,
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      const IssueFormScreen()),
-                            ).then((_) => _loadIssues());
-                          },
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create Report'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18), // Match input height
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // LIST VIEW
-                    Expanded(
-                      child: reportsProvider.isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : filteredIssues.isEmpty
-                              ? const Center(
-                                  child: Text('No reports found.',
-                                      style: TextStyle(color: Colors.white54)))
-                              : ListView.separated(
-                                  itemCount: filteredIssues.length,
-                                  separatorBuilder: (context, index) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, index) {
-                                    final issue = filteredIssues[index];
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                            0xFF1E293B), // Card color
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: ListTile(
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 24, vertical: 8),
-                                        leading: Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withOpacity(0.05),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: const Icon(
-                                              Icons.assignment_outlined,
-                                              color: Colors.white),
-                                        ),
-                                        title: Text(
-                                          '${issue.sno ?? "N/A"} - ${issue.name}',
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        subtitle: Text(
-                                          issue.problem,
-                                          style: const TextStyle(
-                                              color: Colors.white54),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color: issue.isIssueSorted
-                                                    ? Colors.green
-                                                        .withOpacity(0.2)
-                                                    : Colors.red
-                                                        .withOpacity(0.2),
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                issue.isIssueSorted
-                                                    ? 'Sorted'
-                                                    : 'Pending',
-                                                style: TextStyle(
-                                                  color: issue.isIssueSorted
-                                                      ? Colors.greenAccent
-                                                      : Colors.redAccent,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            const Icon(Icons.chevron_right,
-                                                color: Colors.white54),
-                                          ],
-                                        ),
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  IssueFormScreen(issue: issue),
-                                            ),
-                                          ).then((_) => _loadIssues());
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
-                    ),
-                  ],
-                ),
-              ),
+          if (user.role == 'superadmin' || user.role == 'admin')
+            IconButton(
+              icon: const Icon(Icons.manage_accounts),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const UserManagementScreen()),
+                );
+              },
+              tooltip: 'Manage Users',
             ),
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            onPressed: () =>
+                ExportService.exportToCsv(filteredIssues), // Impl later
+            tooltip: 'Export CSV',
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: () =>
+                ExportService.exportToPdf(filteredIssues, user), // Impl later
+            tooltip: 'Export PDF',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              authProvider.logout();
+              Navigator.pushReplacementNamed(
+                  context, '/'); // Or logic to go back
+              // Since we pushed replacement, we might need to recreate LoginScreen or pop
+              // For now, main.dart logic doesn't support 'named' routes fully unless defined.
+              // Let's just push LoginScreen replacement.
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                    builder: (context) => const LoginScreenStub()),
+              );
+            },
+            tooltip: 'Logout',
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isSelected;
-  final Color? color;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isSelected = false,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // If selected, use Primary color, else use provided color or white54
-    final contentColor = isSelected
-        ? Theme.of(context).colorScheme.primary
-        : (color ?? Colors.white54);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withOpacity(0.1), // Highlight bg
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
-        child: Row(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           children: [
-            Icon(icon, color: contentColor, size: 22),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : contentColor,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      labelText: 'Search (Name, EmpNo, Problem...)',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const SizedBox(width: 16),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const IssueFormScreen()),
+                    ).then((_) => _loadIssues());
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('New Issue'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: reportsProvider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredIssues.isEmpty
+                      ? const Center(child: Text('No reports found.'))
+                      : DataTable2(
+                          columnSpacing: 12,
+                          horizontalMargin: 12,
+                          minWidth: 800,
+                          columns: const [
+                            DataColumn2(
+                                label: Text('S.No'), size: ColumnSize.S),
+                            DataColumn2(
+                                label: Text('Date'), size: ColumnSize.S),
+                            DataColumn2(
+                                label: Text('Name'), size: ColumnSize.M),
+                            DataColumn2(
+                                label: Text('Emp No'), size: ColumnSize.S),
+                            DataColumn2(
+                                label: Text('Problem'), size: ColumnSize.L),
+                            DataColumn2(
+                                label: Text('Sorted?'), size: ColumnSize.S),
+                            DataColumn2(
+                                label: Text('Attended By'), size: ColumnSize.M),
+                            DataColumn2(
+                                label: Text('Actions'), size: ColumnSize.S),
+                          ],
+                          rows: filteredIssues.map((issue) {
+                            return DataRow(cells: [
+                              DataCell(Text(issue.sno?.toString() ?? '-')),
+                              DataCell(Text(
+                                  DateFormat('yyyy-MM-dd').format(issue.date))),
+                              DataCell(Text(issue.name)),
+                              DataCell(Text(issue.empNo)),
+                              DataCell(Text(issue.problem)),
+                              DataCell(
+                                Icon(
+                                  issue.isIssueSorted
+                                      ? Icons.check_circle
+                                      : Icons.cancel,
+                                  color: issue.isIssueSorted
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+                              DataCell(Text(issue.attendedBy)),
+                              DataCell(Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, size: 20),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              IssueFormScreen(issue: issue),
+                                        ),
+                                      ).then((_) => _loadIssues());
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red, size: 20),
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Delete Issue'),
+                                          content: const Text(
+                                              'Are you sure you want to delete this issue?'),
+                                          actions: [
+                                            TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, false),
+                                                child: const Text('Cancel')),
+                                            TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, true),
+                                                child: const Text('Delete')),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await reportsProvider.deleteIssue(
+                                            issue.id!, user.id!);
+                                      }
+                                    },
+                                  ),
+                                ],
+                              )),
+                            ]);
+                          }).toList(),
+                        ),
             ),
           ],
         ),
