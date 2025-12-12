@@ -105,7 +105,7 @@ class IssueDetailScreen extends StatelessWidget {
                     Expanded(
                         child: _buildDetailCard(
                             'Materials Replaced',
-                            issue.materialsReplaced!.isEmpty
+                            (issue.materialsReplaced?.isEmpty ?? true)
                                 ? 'None'
                                 : issue.materialsReplaced!,
                             Icons.build_outlined)),
