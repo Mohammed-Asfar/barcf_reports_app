@@ -325,10 +325,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
               _activeSection == 'dashboard', () {
             setState(() => _activeSection = 'dashboard');
           }),
-          _buildNavItem(Icons.list_alt_outlined, 'All Reports',
-              _activeSection == 'reports', () {
-            setState(() => _activeSection = 'reports');
-          }),
           if (user.role == 'superadmin' || user.role == 'admin')
             _buildNavItem(Icons.people_outline, 'User Management',
                 _activeSection == 'users', () {
