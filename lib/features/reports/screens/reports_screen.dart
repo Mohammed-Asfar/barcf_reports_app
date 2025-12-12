@@ -771,6 +771,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       horizontalMargin: 20,
       headingRowHeight: 52,
       dataRowHeight: 56,
+      showCheckboxColumn: false,
       headingTextStyle: TextStyle(
           color: Colors.grey.shade500,
           fontWeight: FontWeight.w600,
@@ -787,35 +788,47 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ],
       rows: issues
           .map((issue) => DataRow(
-                onSelectChanged: (_) {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => IssueDetailScreen(issue: issue)));
-                },
                 cells: [
-                  DataCell(Text(issue.sno?.toString() ?? '-',
-                      style: const TextStyle(color: Colors.white))),
-                  DataCell(Text(issue.name,
-                      style: const TextStyle(color: Colors.white))),
-                  DataCell(Text(issue.empNo,
-                      style: const TextStyle(color: Colors.white))),
-                  DataCell(Tooltip(
-                      message: issue.problem,
-                      child: Text(issue.problem,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white)))),
-                  DataCell(Text(DateFormat('dd/MM/yyyy').format(issue.date),
-                      style: TextStyle(color: Colors.grey.shade400))),
-                  DataCell(Text(issue.attendedBy,
-                      style: const TextStyle(color: Colors.white))),
-                  DataCell(_buildStatusBadge(issue.isIssueSorted)),
+                  DataCell(
+                      Text(issue.sno?.toString() ?? '-',
+                          style: const TextStyle(color: Colors.white)),
+                      onTap: () => _navigateToDetail(issue)),
+                  DataCell(
+                      Text(issue.name,
+                          style: const TextStyle(color: Colors.white)),
+                      onTap: () => _navigateToDetail(issue)),
+                  DataCell(
+                      Text(issue.empNo,
+                          style: const TextStyle(color: Colors.white)),
+                      onTap: () => _navigateToDetail(issue)),
+                  DataCell(
+                      Tooltip(
+                          message: issue.problem,
+                          child: Text(issue.problem,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white))),
+                      onTap: () => _navigateToDetail(issue)),
+                  DataCell(
+                      Text(DateFormat('dd/MM/yyyy').format(issue.date),
+                          style: TextStyle(color: Colors.grey.shade400)),
+                      onTap: () => _navigateToDetail(issue)),
+                  DataCell(
+                      Text(issue.attendedBy,
+                          style: const TextStyle(color: Colors.white)),
+                      onTap: () => _navigateToDetail(issue)),
+                  DataCell(_buildStatusBadge(issue.isIssueSorted),
+                      onTap: () => _navigateToDetail(issue)),
                   DataCell(_buildActionMenu(issue, reportsProvider, user)),
                 ],
               ))
           .toList(),
     );
+  }
+
+  void _navigateToDetail(Issue issue) {
+    Navigator.push(context,
+        MaterialPageRoute(builder: (_) => IssueDetailScreen(issue: issue)));
   }
 
   Widget _buildStatusBadge(bool isResolved) {
