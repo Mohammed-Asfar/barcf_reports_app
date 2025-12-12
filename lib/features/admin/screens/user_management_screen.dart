@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:data_table_2/data_table_2.dart';
 import '../../../core/auth/auth_service.dart';
 import '../providers/user_provider.dart';
+import '../../reports/models/user_model.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -168,15 +169,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               ),
                             ),
                             DataCell(
-                              u.username == 'superadmin'
-                                  ? const SizedBox.shrink()
-                                  : IconButton(
-                                      icon: const Icon(Icons.delete_outline,
-                                          color: Colors.redAccent),
-                                      onPressed: () => _confirmDeleteUser(
-                                          u.id!, u.username, userProvider),
-                                      tooltip: 'Delete user',
-                                    ),
+                              _buildUserActions(u, userProvider),
                             ),
                           ]);
                         }).toList(),
@@ -210,5 +203,116 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (confirm == true) {
       await userProvider.deleteUser(userId);
     }
+  }
+
+  // Build actions based on role permissions
+  Widget _buildUserActions(User targetUser, UserProvider userProvider) {
+    final currentUser =
+        Provider.of<AuthService>(context, listen: false).currentUser;
+    if (currentUser == null) return const SizedBox.shrink();
+
+    // Superadmin user (username 'superadmin') cannot be modified
+    if (targetUser.username == 'superadmin') {
+      return const SizedBox.shrink();
+    }
+
+    // Check if current user can reset password for target user
+    // Superadmin can reset: user, admin, superadmin (except the default 'superadmin')
+    // Admin can reset: user only
+    final canResetPassword = currentUser.role == 'superadmin' ||
+        (currentUser.role == 'admin' && targetUser.role == 'user');
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (canResetPassword)
+          IconButton(
+            icon: const Icon(Icons.lock_reset, color: Colors.blueAccent),
+            onPressed: () => _showResetPasswordDialog(
+                targetUser.id!, targetUser.username, userProvider),
+            tooltip: 'Reset password',
+          ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          onPressed: () => _confirmDeleteUser(
+              targetUser.id!, targetUser.username, userProvider),
+          tooltip: 'Delete user',
+        ),
+      ],
+    );
+  }
+
+  // Show reset password dialog
+  void _showResetPasswordDialog(
+      int userId, String username, UserProvider userProvider) {
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reset Password for "$username"'),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(
+                  hintText: 'New Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                decoration: const InputDecoration(
+                  hintText: 'Confirm Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                obscureText: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (passwordController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password cannot be empty')),
+                );
+                return;
+              }
+              if (passwordController.text != confirmPasswordController.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Passwords do not match')),
+                );
+                return;
+              }
+              final success = await userProvider.resetPassword(
+                  userId, passwordController.text);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Password reset successfully'
+                        : 'Failed to reset password'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Reset Password'),
+          ),
+        ],
+      ),
+    );
   }
 }

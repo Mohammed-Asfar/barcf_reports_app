@@ -58,5 +58,24 @@ class UserProvider with ChangeNotifier {
     await fetchUsers();
   }
 
-  // Reset Password could be added here
+  // Reset password for a user
+  Future<bool> resetPassword(int userId, String newPassword) async {
+    final db = await DatabaseHelper.instance.database;
+    final hashedPassword = sha256.convert(utf8.encode(newPassword)).toString();
+
+    try {
+      await db.update(
+        'users',
+        {
+          'passwordHash': hashedPassword,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }

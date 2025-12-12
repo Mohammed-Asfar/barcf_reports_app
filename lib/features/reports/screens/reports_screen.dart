@@ -7,8 +7,9 @@ import 'package:barcf_reports_app/core/auth/auth_service.dart';
 import '../models/issue_model.dart';
 import '../providers/reports_provider.dart';
 import 'issue_form_screen.dart';
+import 'issue_detail_screen.dart';
 import '../services/export_service.dart';
-import '../../admin/screens/user_management_screen.dart';
+import '../../admin/providers/user_provider.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -21,12 +22,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _statusFilter = 'All';
+  String _attendedByFilter = 'All';
+  DateTime? _fromDate;
+  DateTime? _toDate;
+
+  // Sidebar navigation
+  String _activeSection = 'dashboard'; // 'dashboard', 'reports', 'users'
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadIssues();
+      _loadUsers();
     });
   }
 
@@ -39,18 +47,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthService>(context);
-    final reportsProvider = Provider.of<ReportsProvider>(context);
-    final user = authProvider.currentUser;
-
-    if (user == null) {
-      return const Scaffold(body: Center(child: Text('Unauthorized')));
+  void _loadUsers() {
+    final user = Provider.of<AuthService>(context, listen: false).currentUser;
+    if (user != null && (user.role == 'superadmin' || user.role == 'admin')) {
+      Provider.of<UserProvider>(context, listen: false).fetchUsers();
     }
+  }
 
-    // Filter Logic
-    List<Issue> filteredIssues = reportsProvider.issues.where((issue) {
+  List<Issue> _getFilteredIssues(List<Issue> issues) {
+    return issues.where((issue) {
       final query = _searchQuery.toLowerCase();
       final matchesSearch = issue.name.toLowerCase().contains(query) ||
           issue.empNo.toLowerCase().contains(query) ||
@@ -62,14 +67,188 @@ class _ReportsScreenState extends State<ReportsScreen> {
           (_statusFilter == 'Resolved' && issue.isIssueSorted) ||
           (_statusFilter == 'Pending' && !issue.isIssueSorted);
 
-      return matchesSearch && matchesStatus;
-    }).toList();
+      final matchesAttendedBy =
+          _attendedByFilter == 'All' || issue.attendedBy == _attendedByFilter;
 
+      final matchesDateRange = (_fromDate == null ||
+              issue.date
+                  .isAfter(_fromDate!.subtract(const Duration(days: 1)))) &&
+          (_toDate == null ||
+              issue.date.isBefore(_toDate!.add(const Duration(days: 1))));
+
+      return matchesSearch &&
+          matchesStatus &&
+          matchesAttendedBy &&
+          matchesDateRange;
+    }).toList();
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _searchQuery = '';
+      _searchController.clear();
+      _statusFilter = 'All';
+      _attendedByFilter = 'All';
+      _fromDate = null;
+      _toDate = null;
+    });
+  }
+
+  // Show date range picker for export and filter data accordingly
+  Future<void> _showExportWithDateRange(String exportType, dynamic user) async {
+    final reportsProvider =
+        Provider.of<ReportsProvider>(context, listen: false);
+
+    final DateTimeRange? range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      initialDateRange: DateTimeRange(
+        start: DateTime.now().subtract(const Duration(days: 30)),
+        end: DateTime.now(),
+      ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF7C3AED),
+              onPrimary: Colors.white,
+              surface: Color(0xFF1A1A24),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+              child: child!,
+            ),
+          ),
+        );
+      },
+    );
+
+    if (range != null) {
+      // Filter issues by selected date range
+      final filteredForExport = reportsProvider.issues.where((issue) {
+        return issue.date
+                .isAfter(range.start.subtract(const Duration(days: 1))) &&
+            issue.date.isBefore(range.end.add(const Duration(days: 1)));
+      }).toList();
+
+      if (exportType == 'pdf') {
+        await ExportService.exportToPdf(filteredForExport, user);
+      } else {
+        await ExportService.exportToCsv(filteredForExport);
+      }
+    }
+  }
+
+  // Show date range picker for filtering table data
+  Future<void> _showDateRangeFilter() async {
+    final DateTimeRange? range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      initialDateRange: _fromDate != null && _toDate != null
+          ? DateTimeRange(start: _fromDate!, end: _toDate!)
+          : DateTimeRange(
+              start: DateTime.now().subtract(const Duration(days: 30)),
+              end: DateTime.now(),
+            ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF7C3AED),
+              onPrimary: Colors.white,
+              surface: Color(0xFF1A1A24),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+              child: child!,
+            ),
+          ),
+        );
+      },
+    );
+
+    if (range != null) {
+      setState(() {
+        _fromDate = range.start;
+        _toDate = range.end;
+      });
+    }
+  }
+
+  // Build date range filter button widget
+  Widget _buildDateRangeFilterButton() {
+    final hasDateFilter = _fromDate != null && _toDate != null;
+    return InkWell(
+      onTap: _showDateRangeFilter,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F0F14),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.date_range, color: Colors.grey.shade500, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              hasDateFilter
+                  ? '${DateFormat('dd/MM/yy').format(_fromDate!)} - ${DateFormat('dd/MM/yy').format(_toDate!)}'
+                  : 'Date Range',
+              style: TextStyle(
+                  color: hasDateFilter ? Colors.white : Colors.grey.shade500,
+                  fontSize: 14),
+            ),
+            if (hasDateFilter) ...[
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _fromDate = null;
+                    _toDate = null;
+                  });
+                },
+                child: Icon(Icons.close, color: Colors.grey.shade500, size: 16),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthService>(context);
+    final reportsProvider = Provider.of<ReportsProvider>(context);
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text('Unauthorized')));
+    }
+
+    final filteredIssues = _getFilteredIssues(reportsProvider.issues);
     final totalIssues = reportsProvider.issues.length;
     final resolvedCount =
         reportsProvider.issues.where((i) => i.isIssueSorted).length;
     final pendingCount =
         reportsProvider.issues.where((i) => !i.isIssueSorted).length;
+
+    // Get unique attendedBy values for filter
+    final attendedByList = [
+      'All',
+      ...reportsProvider.issues.map((i) => i.attendedBy).toSet()
+    ];
 
     return Scaffold(
       body: Row(
@@ -84,24 +263,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _buildTopBar(user),
                 // Content Area
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Page Header
-                        _buildPageHeader(),
-                        const SizedBox(height: 24),
-                        // Stats Cards
-                        _buildStatsRow(
-                            totalIssues, resolvedCount, pendingCount),
-                        const SizedBox(height: 24),
-                        // Report List Section
-                        _buildReportListSection(
-                            filteredIssues, reportsProvider, user),
-                      ],
-                    ),
-                  ),
+                  child: _activeSection == 'users'
+                      ? _buildUserManagementContent()
+                      : _buildReportsContent(
+                          filteredIssues,
+                          reportsProvider,
+                          user,
+                          totalIssues,
+                          resolvedCount,
+                          pendingCount,
+                          attendedByList,
+                        ),
                 ),
               ],
             ),
@@ -149,15 +321,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           const Divider(color: Colors.white12),
           // Navigation Items
-          _buildNavItem(Icons.dashboard_outlined, 'Dashboard', true),
-          _buildNavItem(Icons.list_alt_outlined, 'All Reports', false),
+          _buildNavItem(Icons.dashboard_outlined, 'Dashboard',
+              _activeSection == 'dashboard', () {
+            setState(() => _activeSection = 'dashboard');
+          }),
+          _buildNavItem(Icons.list_alt_outlined, 'All Reports',
+              _activeSection == 'reports', () {
+            setState(() => _activeSection = 'reports');
+          }),
           if (user.role == 'superadmin' || user.role == 'admin')
-            _buildNavItem(Icons.people_outline, 'User Management', false,
-                onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const UserManagementScreen()));
+            _buildNavItem(Icons.people_outline, 'User Management',
+                _activeSection == 'users', () {
+              setState(() => _activeSection = 'users');
             }),
           const Spacer(),
           const Divider(color: Colors.white12),
@@ -213,8 +388,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isActive,
-      {VoidCallback? onTap}) {
+  Widget _buildNavItem(
+      IconData icon, String label, bool isActive, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -234,12 +409,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           child: Row(
             children: [
-              Icon(
-                icon,
-                color:
-                    isActive ? const Color(0xFF7C3AED) : Colors.grey.shade500,
-                size: 20,
-              ),
+              Icon(icon,
+                  color:
+                      isActive ? const Color(0xFF7C3AED) : Colors.grey.shade500,
+                  size: 20),
               const SizedBox(width: 12),
               Text(
                 label,
@@ -265,34 +438,53 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       child: Row(
         children: [
-          // Breadcrumb
           Row(
             children: [
               Icon(Icons.home_outlined, size: 18, color: Colors.grey.shade500),
               const SizedBox(width: 8),
               Text('/', style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(width: 8),
-              Text('Report', style: TextStyle(color: Colors.grey.shade500)),
-              const SizedBox(width: 8),
-              Text('/', style: TextStyle(color: Colors.grey.shade600)),
-              const SizedBox(width: 8),
-              const Text('Issue Reports',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w500)),
+              Text(
+                _activeSection == 'users' ? 'User Management' : 'Issue Reports',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500),
+              ),
             ],
           ),
           const Spacer(),
-          // Actions
           IconButton(
             icon: Icon(Icons.refresh, color: Colors.grey.shade400),
-            onPressed: _loadIssues,
+            onPressed: () {
+              _loadIssues();
+              _loadUsers();
+            },
             tooltip: 'Refresh',
           ),
-          IconButton(
-            icon:
-                Icon(Icons.notifications_outlined, color: Colors.grey.shade400),
-            onPressed: () {},
-          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportsContent(
+    List<Issue> filteredIssues,
+    ReportsProvider reportsProvider,
+    user,
+    int totalIssues,
+    int resolvedCount,
+    int pendingCount,
+    List<String> attendedByList,
+  ) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildPageHeader(),
+          const SizedBox(height: 24),
+          _buildStatsRow(totalIssues, resolvedCount, pendingCount),
+          const SizedBox(height: 24),
+          _buildReportListSection(
+              filteredIssues, reportsProvider, user, attendedByList),
         ],
       ),
     );
@@ -317,16 +509,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
             const Text(
               'Issue Reports',
               style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
             ),
             const SizedBox(height: 4),
-            Text(
-              'Auto-updates in 2 min',
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
+            Text('Auto-updates in 2 min',
+                style: TextStyle(color: Colors.grey.shade500)),
           ],
         ),
       ],
@@ -359,42 +548,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-            ),
+            Text(title,
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                // Mini chart placeholder
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
                 CustomPaint(
-                  size: const Size(80, 30),
-                  painter: _SparklinePainter(accentColor),
-                ),
+                    size: const Size(80, 30),
+                    painter: _SparklinePainter(accentColor)),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              'Last 30 days',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-            ),
+            Text('Last 30 days',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildReportListSection(
-      List<Issue> filteredIssues, ReportsProvider reportsProvider, user) {
+  Widget _buildReportListSection(List<Issue> filteredIssues,
+      ReportsProvider reportsProvider, user, List<String> attendedByList) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A24),
@@ -404,84 +584,110 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section Header
+          // Section Header with Filters
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Report List',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const Spacer(),
-                // Filter Dropdowns
-                _buildFilterDropdown(
-                    'All Status', ['All', 'Resolved', 'Pending'], _statusFilter,
-                    (val) {
-                  setState(() => _statusFilter = val!);
-                }),
-                const SizedBox(width: 12),
-                // Search
-                SizedBox(
-                  width: 200,
-                  height: 40,
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Search...',
-                      hintStyle: TextStyle(color: Colors.grey.shade600),
-                      prefixIcon: Icon(Icons.search,
-                          color: Colors.grey.shade500, size: 20),
-                      contentPadding: EdgeInsets.zero,
-                      filled: true,
-                      fillColor: const Color(0xFF0F0F14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide:
-                            BorderSide(color: Colors.white.withOpacity(0.1)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide:
-                            BorderSide(color: Colors.white.withOpacity(0.1)),
+                Row(
+                  children: [
+                    const Text('Report List',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    const Spacer(),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const IssueFormScreen()))
+                            .then((_) => _loadIssues());
+                      },
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('New Issue'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF22C55E),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                     ),
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                // Export Buttons
-                _buildOutlinedButton(
-                    Icons.picture_as_pdf_outlined, 'Export PDF', () {
-                  ExportService.exportToPdf(filteredIssues, user);
-                }),
-                const SizedBox(width: 8),
-                _buildOutlinedButton(Icons.table_chart_outlined, 'Export Excel',
-                    () {
-                  ExportService.exportToCsv(filteredIssues);
-                }),
-                const SizedBox(width: 8),
-                // New Issue Button
-                FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const IssueFormScreen()),
-                    ).then((_) => _loadIssues());
-                  },
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('New Issue'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF22C55E),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
+                const SizedBox(height: 16),
+                // Filters Row
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    // Status Filter
+                    _buildFilterDropdown(
+                        'Status', ['All', 'Resolved', 'Pending'], _statusFilter,
+                        (val) {
+                      setState(() => _statusFilter = val!);
+                    }),
+                    // Attended By Filter
+                    _buildFilterDropdown(
+                        'Attended By', attendedByList, _attendedByFilter,
+                        (val) {
+                      setState(() => _attendedByFilter = val!);
+                    }),
+                    // Date Range Filter
+                    _buildDateRangeFilterButton(),
+                    // Clear Filters
+                    if (_statusFilter != 'All' ||
+                        _attendedByFilter != 'All' ||
+                        _fromDate != null ||
+                        _toDate != null ||
+                        _searchQuery.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: _clearFilters,
+                        icon: const Icon(Icons.clear, size: 18),
+                        label: const Text('Clear Filters'),
+                        style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey.shade400),
+                      ),
+                    // Search
+                    SizedBox(
+                      width: 200,
+                      height: 40,
+                      child: TextField(
+                        controller: _searchController,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Search...',
+                          hintStyle: TextStyle(color: Colors.grey.shade600),
+                          prefixIcon: Icon(Icons.search,
+                              color: Colors.grey.shade500, size: 20),
+                          contentPadding: EdgeInsets.zero,
+                          filled: true,
+                          fillColor: const Color(0xFF0F0F14),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                  color: Colors.white.withOpacity(0.1))),
+                          enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                  color: Colors.white.withOpacity(0.1))),
+                        ),
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                      ),
+                    ),
+                    // Export Buttons
+                    _buildOutlinedButton(
+                        Icons.picture_as_pdf_outlined, 'Export PDF', () async {
+                      await _showExportWithDateRange('pdf', user);
+                    }),
+                    _buildOutlinedButton(
+                        Icons.table_chart_outlined, 'Export Excel', () async {
+                      await _showExportWithDateRange('excel', user);
+                    }),
+                  ],
                 ),
               ],
             ),
@@ -504,6 +710,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildFilterDropdown(String label, List<String> items, String value,
       ValueChanged<String?> onChanged) {
     return Container(
+      height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF0F0F14),
@@ -527,14 +734,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildOutlinedButton(
       IconData icon, String label, VoidCallback onPressed) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.grey.shade400,
-        side: BorderSide(color: Colors.white.withOpacity(0.1)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return SizedBox(
+      height: 40,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.grey.shade400,
+          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
       ),
     );
   }
@@ -548,6 +758,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
           const SizedBox(height: 16),
           Text('No reports found',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+          if (_statusFilter != 'All' ||
+              _attendedByFilter != 'All' ||
+              _fromDate != null ||
+              _toDate != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: TextButton(
+                  onPressed: _clearFilters, child: const Text('Clear Filters')),
+            ),
         ],
       ),
     );
@@ -561,10 +780,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       headingRowHeight: 52,
       dataRowHeight: 56,
       headingTextStyle: TextStyle(
-        color: Colors.grey.shade500,
-        fontWeight: FontWeight.w600,
-        fontSize: 13,
-      ),
+          color: Colors.grey.shade500,
+          fontWeight: FontWeight.w600,
+          fontSize: 13),
       columns: const [
         DataColumn2(label: Text('S.No'), size: ColumnSize.S),
         DataColumn2(label: Text('Name'), size: ColumnSize.M),
@@ -577,6 +795,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ],
       rows: issues
           .map((issue) => DataRow(
+                onSelectChanged: (_) {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => IssueDetailScreen(issue: issue)));
+                },
                 cells: [
                   DataCell(Text(issue.sno?.toString() ?? '-',
                       style: const TextStyle(color: Colors.white))),
@@ -584,17 +808,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       style: const TextStyle(color: Colors.white))),
                   DataCell(Text(issue.empNo,
                       style: const TextStyle(color: Colors.white))),
-                  DataCell(
-                    Tooltip(
+                  DataCell(Tooltip(
                       message: issue.problem,
-                      child: Text(
-                        issue.problem,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
+                      child: Text(issue.problem,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white)))),
                   DataCell(Text(DateFormat('dd/MM/yyyy').format(issue.date),
                       style: TextStyle(color: Colors.grey.shade400))),
                   DataCell(Text(issue.attendedBy,
@@ -632,11 +851,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
       icon: Icon(Icons.more_horiz, color: Colors.grey.shade500),
       color: const Color(0xFF1A1A24),
       onSelected: (value) async {
-        if (value == 'edit') {
+        if (value == 'view') {
           Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => IssueFormScreen(issue: issue)),
-          ).then((_) => _loadIssues());
+              context,
+              MaterialPageRoute(
+                  builder: (_) => IssueDetailScreen(issue: issue)));
+        } else if (value == 'edit') {
+          Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => IssueFormScreen(issue: issue)))
+              .then((_) => _loadIssues());
         } else if (value == 'delete') {
           final confirm = await showDialog<bool>(
             context: context,
@@ -649,44 +874,264 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     onPressed: () => Navigator.pop(context, false),
                     child: const Text('Cancel')),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style:
-                      TextButton.styleFrom(foregroundColor: Colors.redAccent),
-                  child: const Text('Delete'),
-                ),
+                    onPressed: () => Navigator.pop(context, true),
+                    style:
+                        TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                    child: const Text('Delete')),
               ],
             ),
           );
-          if (confirm == true) {
+          if (confirm == true)
             await reportsProvider.deleteIssue(issue.id!, user.id!);
-          }
         }
       },
       itemBuilder: (context) => [
         const PopupMenuItem(
+            value: 'view',
+            child: Row(children: [
+              Icon(Icons.visibility_outlined, size: 18),
+              SizedBox(width: 8),
+              Text('View Details')
+            ])),
+        const PopupMenuItem(
             value: 'edit',
-            child: Row(
-              children: [
-                Icon(Icons.edit_outlined, size: 18),
-                SizedBox(width: 8),
-                Text('Edit')
-              ],
-            )),
+            child: Row(children: [
+              Icon(Icons.edit_outlined, size: 18),
+              SizedBox(width: 8),
+              Text('Edit')
+            ])),
         const PopupMenuItem(
             value: 'delete',
-            child: Row(
-              children: [
-                Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                SizedBox(width: 8),
-                Text('Delete', style: TextStyle(color: Colors.redAccent))
-              ],
-            )),
+            child: Row(children: [
+              Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+              SizedBox(width: 8),
+              Text('Delete', style: TextStyle(color: Colors.redAccent))
+            ])),
       ],
     );
   }
+
+  // User Management Content (Inline)
+  Widget _buildUserManagementContent() {
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.people,
+                        color: Color(0xFF7C3AED), size: 32),
+                  ),
+                  const SizedBox(width: 20),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('User Management',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                      SizedBox(height: 4),
+                      Text('Manage users and their roles',
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () => _showAddUserDialog(),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add User'),
+                    style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 14)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Users Table
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A24),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.06)),
+                ),
+                child: userProvider.isLoading
+                    ? const SizedBox(
+                        height: 300,
+                        child: Center(child: CircularProgressIndicator()))
+                    : userProvider.users.isEmpty
+                        ? SizedBox(
+                            height: 300,
+                            child: Center(
+                                child: Text('No users found',
+                                    style: TextStyle(
+                                        color: Colors.grey.shade500))))
+                        : SizedBox(
+                            height: 500,
+                            child: DataTable2(
+                              headingRowHeight: 52,
+                              dataRowHeight: 56,
+                              columnSpacing: 16,
+                              horizontalMargin: 20,
+                              columns: const [
+                                DataColumn2(
+                                    label: Text('ID'), size: ColumnSize.S),
+                                DataColumn2(
+                                    label: Text('Username'),
+                                    size: ColumnSize.L),
+                                DataColumn2(
+                                    label: Text('Role'), size: ColumnSize.M),
+                                DataColumn2(
+                                    label: Text('Actions'),
+                                    size: ColumnSize.S,
+                                    numeric: true),
+                              ],
+                              rows: userProvider.users.map((u) {
+                                return DataRow(cells: [
+                                  DataCell(Text(u.id.toString(),
+                                      style: const TextStyle(
+                                          color: Colors.white))),
+                                  DataCell(Text(u.username,
+                                      style: const TextStyle(
+                                          color: Colors.white))),
+                                  DataCell(_buildRoleBadge(u.role)),
+                                  DataCell(u.username == 'superadmin'
+                                      ? const SizedBox.shrink()
+                                      : IconButton(
+                                          icon: const Icon(Icons.delete_outline,
+                                              color: Colors.redAccent),
+                                          onPressed: () => _confirmDeleteUser(
+                                              u.id!, u.username, userProvider),
+                                        )),
+                                ]);
+                              }).toList(),
+                            ),
+                          ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRoleBadge(String role) {
+    Color color;
+    if (role == 'superadmin') {
+      color = Colors.purple;
+    } else if (role == 'admin') {
+      color = Colors.blue;
+    } else {
+      color = Colors.grey;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20)),
+      child: Text(role.toUpperCase(),
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+    );
+  }
+
+  void _showAddUserDialog() {
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
+    String role = 'user';
+    final currentUserRole =
+        Provider.of<AuthService>(context, listen: false).currentUser?.role;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add User'),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(hintText: 'Username')),
+              const SizedBox(height: 16),
+              TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(hintText: 'Password'),
+                  obscureText: true),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: role,
+                items: [
+                  const DropdownMenuItem(value: 'user', child: Text('User')),
+                  if (currentUserRole == 'superadmin')
+                    const DropdownMenuItem(
+                        value: 'admin', child: Text('Admin')),
+                ],
+                onChanged: (val) => role = val!,
+                decoration: const InputDecoration(hintText: 'Role'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              final success =
+                  await Provider.of<UserProvider>(context, listen: false)
+                      .addUser(
+                usernameController.text,
+                passwordController.text,
+                role,
+                Provider.of<AuthService>(context, listen: false)
+                    .currentUser!
+                    .id!,
+              );
+              if (success && mounted) Navigator.pop(context);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteUser(
+      int userId, String username, UserProvider userProvider) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete User'),
+        content: Text('Are you sure you want to delete user "$username"?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirm == true) await userProvider.deleteUser(userId);
+  }
 }
 
-// Sparkline painter for mini charts
+// Sparkline painter
 class _SparklinePainter extends CustomPainter {
   final Color color;
   _SparklinePainter(this.color);
@@ -697,7 +1142,6 @@ class _SparklinePainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
-
     final path = Path();
     path.moveTo(0, size.height * 0.7);
     path.lineTo(size.width * 0.2, size.height * 0.5);
@@ -705,7 +1149,6 @@ class _SparklinePainter extends CustomPainter {
     path.lineTo(size.width * 0.6, size.height * 0.3);
     path.lineTo(size.width * 0.8, size.height * 0.4);
     path.lineTo(size.width, size.height * 0.2);
-
     canvas.drawPath(path, paint);
   }
 
