@@ -211,16 +211,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         Provider.of<AuthService>(context, listen: false).currentUser;
     if (currentUser == null) return const SizedBox.shrink();
 
-    // Superadmin user (username 'superadmin') cannot be modified
-    if (targetUser.username == 'superadmin') {
-      return const SizedBox.shrink();
+    // Check if current user can reset password for target user
+    // Superadmin can reset: user, admin, superadmin (including self)
+    // Admin can reset: user only
+    bool canResetPassword = false;
+    if (currentUser.role == 'superadmin') {
+      // Superadmin can reset anyone's password
+      canResetPassword = true;
+    } else if (currentUser.role == 'admin' && targetUser.role == 'user') {
+      // Admin can only reset user passwords
+      canResetPassword = true;
     }
 
-    // Check if current user can reset password for target user
-    // Superadmin can reset: user, admin, superadmin (except the default 'superadmin')
-    // Admin can reset: user only
-    final canResetPassword = currentUser.role == 'superadmin' ||
-        (currentUser.role == 'admin' && targetUser.role == 'user');
+    // Prevent deleting the default 'superadmin' account, but allow password reset
+    final canDelete = targetUser.username != 'superadmin';
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -232,12 +236,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 targetUser.id!, targetUser.username, userProvider),
             tooltip: 'Reset password',
           ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          onPressed: () => _confirmDeleteUser(
-              targetUser.id!, targetUser.username, userProvider),
-          tooltip: 'Delete user',
-        ),
+        if (canDelete)
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            onPressed: () => _confirmDeleteUser(
+                targetUser.id!, targetUser.username, userProvider),
+            tooltip: 'Delete user',
+          ),
       ],
     );
   }

@@ -605,7 +605,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('New Issue'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF22C55E),
+                        backgroundColor: Theme.of(context).primaryColor,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
                       ),
@@ -993,6 +993,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     numeric: true),
                               ],
                               rows: userProvider.users.map((u) {
+                                final currentUser = Provider.of<AuthService>(
+                                        context,
+                                        listen: false)
+                                    .currentUser;
+                                // Superadmin can reset all, admin can reset users only
+                                final canResetPassword =
+                                    currentUser?.role == 'superadmin' ||
+                                        (currentUser?.role == 'admin' &&
+                                            u.role == 'user');
+                                // Cannot delete the default superadmin account
+                                final canDelete = u.username != 'superadmin';
+
                                 return DataRow(cells: [
                                   DataCell(Text(u.id.toString(),
                                       style: const TextStyle(
@@ -1001,14 +1013,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       style: const TextStyle(
                                           color: Colors.white))),
                                   DataCell(_buildRoleBadge(u.role)),
-                                  DataCell(u.username == 'superadmin'
-                                      ? const SizedBox.shrink()
-                                      : IconButton(
+                                  DataCell(Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (canResetPassword)
+                                        IconButton(
+                                          icon: const Icon(Icons.lock_reset,
+                                              color: Colors.blueAccent),
+                                          onPressed: () =>
+                                              _showResetPasswordDialog(u.id!,
+                                                  u.username, userProvider),
+                                          tooltip: 'Reset password',
+                                        ),
+                                      if (canDelete)
+                                        IconButton(
                                           icon: const Icon(Icons.delete_outline,
                                               color: Colors.redAccent),
                                           onPressed: () => _confirmDeleteUser(
                                               u.id!, u.username, userProvider),
-                                        )),
+                                          tooltip: 'Delete user',
+                                        ),
+                                    ],
+                                  )),
                                 ]);
                               }).toList(),
                             ),
@@ -1124,6 +1150,80 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
     if (confirm == true) await userProvider.deleteUser(userId);
+  }
+
+  // Show reset password dialog
+  void _showResetPasswordDialog(
+      int userId, String username, UserProvider userProvider) {
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reset Password for "$username"'),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(
+                  hintText: 'New Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                decoration: const InputDecoration(
+                  hintText: 'Confirm Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                obscureText: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (passwordController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password cannot be empty')),
+                );
+                return;
+              }
+              if (passwordController.text != confirmPasswordController.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Passwords do not match')),
+                );
+                return;
+              }
+              final success = await userProvider.resetPassword(
+                  userId, passwordController.text);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Password reset successfully'
+                        : 'Failed to reset password'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Reset Password'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
