@@ -31,6 +31,40 @@ class Issue {
     this.deletedAt,
   });
 
+  Issue copyWith({
+    int? id,
+    int? sno,
+    String? name,
+    String? empNo,
+    String? problem,
+    bool? isIssueSorted,
+    String? materialsReplaced,
+    String? attendedBy,
+    DateTime? date,
+    int? createdByUserId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? updatedByUserId,
+    DateTime? deletedAt,
+  }) {
+    return Issue(
+      id: id ?? this.id,
+      sno: sno ?? this.sno,
+      name: name ?? this.name,
+      empNo: empNo ?? this.empNo,
+      problem: problem ?? this.problem,
+      isIssueSorted: isIssueSorted ?? this.isIssueSorted,
+      materialsReplaced: materialsReplaced ?? this.materialsReplaced,
+      attendedBy: attendedBy ?? this.attendedBy,
+      date: date ?? this.date,
+      createdByUserId: createdByUserId ?? this.createdByUserId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      updatedByUserId: updatedByUserId ?? this.updatedByUserId,
+      deletedAt: deletedAt ?? this.deletedAt,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

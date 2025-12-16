@@ -34,10 +34,18 @@ class ReportsProvider with ChangeNotifier {
 
   Future<void> addIssue(Issue issue) async {
     final db = await DatabaseHelper.instance.database;
-    await db.insert('issues', issue.toMap());
-    // Refresh list is handled by UI calling fetchIssues usually, or we can append locally
-    // For simplicity, let's just re-fetch or add locally if we knew the ID.
-    // Since ID is autoincrement, it's safer to re-fetch or return ID from insert.
+
+    // Auto-generate S.No
+    final maxSnoResult = await db.rawQuery(
+        'SELECT MAX(sno) as maxSno FROM issues WHERE deletedAt IS NULL');
+    final currentMax = maxSnoResult.first['maxSno'] as int? ?? 0;
+    final newSno = currentMax + 1;
+
+    final issueWithSno = issue.copyWith(
+      sno: newSno,
+      createdAt: DateTime.now(),
+    );
+    await db.insert('issues', issueWithSno.toMap());
     notifyListeners();
   }
 

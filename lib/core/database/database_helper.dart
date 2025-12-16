@@ -28,8 +28,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -67,8 +68,46 @@ class DatabaseHelper {
     )
     ''';
 
+    const computersTable = '''
+    CREATE TABLE computers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sno INTEGER,
+      name TEXT NOT NULL,
+      empNo TEXT,
+      designation TEXT,
+      section TEXT,
+      roomNo TEXT,
+      processor TEXT,
+      ram TEXT,
+      storage TEXT,
+      graphicsCard TEXT,
+      monitorSize TEXT,
+      monitorBrand TEXT,
+      amcCode TEXT,
+      purpose TEXT,
+      ipAddress TEXT,
+      macAddress TEXT,
+      printer TEXT,
+      connectionType TEXT,
+      adminUser TEXT,
+      printerCartridge TEXT,
+      k7 TEXT,
+      pcSerialNo TEXT,
+      monitorSerialNo TEXT,
+      pcBrand TEXT,
+      status TEXT NOT NULL DEFAULT 'Active',
+      notes TEXT,
+      createdByUserId INTEGER NOT NULL,
+      createdAt TEXT,
+      updatedAt TEXT,
+      deletedAt TEXT,
+      FOREIGN KEY (createdByUserId) REFERENCES users (id)
+    )
+    ''';
+
     await db.execute(userTable);
     await db.execute(issueTable);
+    await db.execute(computersTable);
 
     // Seed Superadmin - Password: 'admin' (This should be hashed in production logic,
     // but for initial seed we might need a known hash or handle it in AuthService)
@@ -84,6 +123,50 @@ class DatabaseHelper {
       'createdAt': DateTime.now().toIso8601String(),
       'updatedAt': DateTime.now().toIso8601String(),
     });
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Recreate computers table with new schema for any upgrade
+    if (oldVersion < 3) {
+      await db.execute('DROP TABLE IF EXISTS computers');
+      const computersTable = '''
+      CREATE TABLE computers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sno INTEGER,
+        name TEXT NOT NULL,
+        empNo TEXT,
+        designation TEXT,
+        section TEXT,
+        roomNo TEXT,
+        processor TEXT,
+        ram TEXT,
+        storage TEXT,
+        graphicsCard TEXT,
+        monitorSize TEXT,
+        monitorBrand TEXT,
+        amcCode TEXT,
+        purpose TEXT,
+        ipAddress TEXT,
+        macAddress TEXT,
+        printer TEXT,
+        connectionType TEXT,
+        adminUser TEXT,
+        printerCartridge TEXT,
+        k7 TEXT,
+        pcSerialNo TEXT,
+        monitorSerialNo TEXT,
+        pcBrand TEXT,
+        status TEXT NOT NULL DEFAULT 'Active',
+        notes TEXT,
+        createdByUserId INTEGER NOT NULL,
+        createdAt TEXT,
+        updatedAt TEXT,
+        deletedAt TEXT,
+        FOREIGN KEY (createdByUserId) REFERENCES users (id)
+      )
+      ''';
+      await db.execute(computersTable);
+    }
   }
 
   Future<void> close() async {

@@ -61,6 +61,7 @@ dependencies:
   # Window Management
   window_manager: ^0.3.7
   bitsdojo_window: ^0.1.6
+  excel: ^4.0.6
 
 dev_dependencies:
   flutter_test:

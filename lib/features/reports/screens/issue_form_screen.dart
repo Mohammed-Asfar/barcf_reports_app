@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../../core/auth/auth_service.dart';
 import '../models/issue_model.dart';
 import '../providers/reports_provider.dart';
+import '../../computers/providers/computers_provider.dart';
+import '../../computers/models/computer_model.dart';
 import 'package:intl/intl.dart';
 
 class IssueFormScreen extends StatefulWidget {
@@ -21,17 +23,19 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
   late TextEditingController _problemController;
   late TextEditingController _materialsController;
   late TextEditingController _attendedByController;
-  late TextEditingController _snoController;
 
   bool _isIssueSorted = false;
   DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
+  List<Computer> _computers = [];
+
+  // Keys to rebuild autocomplete when value changes externally
+  Key _nameAutocompleteKey = UniqueKey();
+  Key _empNoAutocompleteKey = UniqueKey();
 
   @override
   void initState() {
     super.initState();
-    _snoController =
-        TextEditingController(text: widget.issue?.sno?.toString() ?? '');
     _nameController = TextEditingController(text: widget.issue?.name ?? '');
     _empNoController = TextEditingController(text: widget.issue?.empNo ?? '');
     _problemController =
@@ -42,6 +46,29 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
         TextEditingController(text: widget.issue?.attendedBy ?? '');
     _isIssueSorted = widget.issue?.isIssueSorted ?? false;
     _selectedDate = widget.issue?.date ?? DateTime.now();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadComputers());
+  }
+
+  Future<void> _loadComputers() async {
+    final authProvider = Provider.of<AuthService>(context, listen: false);
+    final computersProvider =
+        Provider.of<ComputersProvider>(context, listen: false);
+    final user = authProvider.currentUser;
+    if (user != null) {
+      await computersProvider.fetchComputers(user.id, role: user.role);
+      setState(() => _computers = computersProvider.computers);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _empNoController.dispose();
+    _problemController.dispose();
+    _materialsController.dispose();
+    _attendedByController.dispose();
+    super.dispose();
   }
 
   Future<void> _saveIssue() async {
@@ -53,12 +80,14 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
 
       final issue = Issue(
         id: widget.issue?.id,
-        sno: int.tryParse(_snoController.text),
+        sno: widget.issue?.sno,
         name: _nameController.text,
         empNo: _empNoController.text,
         problem: _problemController.text,
         isIssueSorted: _isIssueSorted,
-        materialsReplaced: _materialsController.text,
+        materialsReplaced: _materialsController.text.isNotEmpty
+            ? _materialsController.text
+            : null,
         attendedBy: _attendedByController.text,
         date: _selectedDate,
         createdByUserId: widget.issue?.createdByUserId ?? user.id!,
@@ -90,198 +119,342 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
     }
   }
 
+  // Get unique names from computers
+  List<String> get _nameOptions =>
+      _computers.map((c) => c.name).where((n) => n.isNotEmpty).toSet().toList()
+        ..sort();
+
+  // Get unique emp numbers from computers
+  List<String> get _empNoOptions => _computers
+      .where((c) => c.empNo != null && c.empNo!.isNotEmpty)
+      .map((c) => c.empNo!)
+      .toSet()
+      .toList()
+    ..sort();
+
+  // Auto-fill emp no when name is selected
+  void _onNameSelected(String name) {
+    final computer = _computers.firstWhere(
+      (c) => c.name == name,
+      orElse: () => Computer(name: '', status: '', createdByUserId: 0),
+    );
+    if (computer.empNo != null && computer.empNo!.isNotEmpty) {
+      setState(() {
+        _nameController.text = name;
+        _empNoController.text = computer.empNo!;
+        _empNoAutocompleteKey = UniqueKey(); // Rebuild to show new value
+      });
+    }
+  }
+
+  // Auto-fill name when emp no is selected
+  void _onEmpNoSelected(String empNo) {
+    final computer = _computers.firstWhere(
+      (c) => c.empNo == empNo,
+      orElse: () => Computer(name: '', status: '', createdByUserId: 0),
+    );
+    if (computer.name.isNotEmpty) {
+      setState(() {
+        _empNoController.text = empNo;
+        _nameController.text = computer.name;
+        _nameAutocompleteKey = UniqueKey(); // Rebuild to show new value
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.issue != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.issue == null ? 'New Issue' : 'Edit Issue'),
-      ),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Issue' : 'New Issue')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 600),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A24),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
-            ),
-            padding: const EdgeInsets.all(32),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section Header
-                  const Text(
-                    'Issue Details',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Fill in the information below to ${widget.issue == null ? 'create a new' : 'update the'} issue.',
-                    style: TextStyle(color: Colors.grey.shade500),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Form Fields
-                  _buildLabel('S.No (Optional)'),
-                  TextFormField(
-                    controller: _snoController,
-                    decoration:
-                        const InputDecoration(hintText: 'Enter serial number'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildLabel('Name *'),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(hintText: 'Enter name'),
-                    validator: (val) => val!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildLabel('Employee No *'),
-                  TextFormField(
-                    controller: _empNoController,
-                    decoration: const InputDecoration(
-                        hintText: 'Enter employee number'),
-                    validator: (val) => val!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildLabel('Problem *'),
-                  TextFormField(
-                    controller: _problemController,
-                    decoration:
-                        const InputDecoration(hintText: 'Describe the problem'),
-                    maxLines: 3,
-                    validator: (val) => val!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildLabel('Materials Replaced'),
-                  TextFormField(
-                    controller: _materialsController,
-                    decoration: const InputDecoration(
-                        hintText: 'List materials replaced (if any)'),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildLabel('Attended By *'),
-                  TextFormField(
-                    controller: _attendedByController,
-                    decoration: const InputDecoration(
-                        hintText: 'Enter name of attendee'),
-                    validator: (val) => val!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 20),
-
-                  _buildLabel('Date'),
-                  InkWell(
-                    onTap: _pickDate,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF242432),
-                        borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.08)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today,
-                              color: Colors.grey.shade400, size: 20),
-                          const SizedBox(width: 12),
-                          Text(
-                            DateFormat('MMMM dd, yyyy').format(_selectedDate),
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          const Spacer(),
-                          Icon(Icons.arrow_drop_down,
-                              color: Colors.grey.shade400),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Status Toggle
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF242432),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
-                    ),
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Issue Resolved',
-                          style: TextStyle(color: Colors.white)),
-                      subtitle: Text(
-                        _isIssueSorted
-                            ? 'This issue has been sorted'
-                            : 'This issue is still pending',
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 12),
-                      ),
-                      value: _isIssueSorted,
-                      onChanged: (val) => setState(() => _isIssueSorted = val),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: FilledButton(
-                      onPressed: _isSaving ? null : _saveIssue,
-                      child: _isSaving
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              widget.issue == null
-                                  ? 'Create Issue'
-                                  : 'Update Issue',
-                              style: const TextStyle(fontSize: 16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle('Basic Information'),
+              Row(children: [
+                Expanded(child: _buildNameAutocomplete()),
+                const SizedBox(width: 16),
+                Expanded(child: _buildEmpNoAutocomplete()),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: _textField(_attendedByController, 'Attended By *',
+                        required: true)),
+              ]),
+              const SizedBox(height: 24),
+              _sectionTitle('Problem Details'),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                    flex: 2,
+                    child: _textField(_problemController, 'Problem *',
+                        required: true, maxLines: 3)),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: _textField(
+                        _materialsController, 'Materials Replaced',
+                        maxLines: 3)),
+              ]),
+              const SizedBox(height: 24),
+              _sectionTitle('Status & Date'),
+              Row(children: [
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date',
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: _pickDate,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF242432),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(0.1)),
                             ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                            child: Row(children: [
+                              Icon(Icons.calendar_today,
+                                  color: Colors.grey.shade400, size: 20),
+                              const SizedBox(width: 12),
+                              Text(
+                                  DateFormat('MMM dd, yyyy')
+                                      .format(_selectedDate),
+                                  style: const TextStyle(color: Colors.white)),
+                              const Spacer(),
+                              Icon(Icons.arrow_drop_down,
+                                  color: Colors.grey.shade400),
+                            ]),
+                          ),
+                        ),
+                      ]),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Status',
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF242432),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(_isIssueSorted ? 'Resolved' : 'Pending',
+                                style: const TextStyle(color: Colors.white)),
+                            value: _isIssueSorted,
+                            onChanged: (val) =>
+                                setState(() => _isIssueSorted = val),
+                          ),
+                        ),
+                      ]),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(child: SizedBox()),
+              ]),
+              const SizedBox(height: 32),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel')),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: _isSaving ? null : _saveIssue,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : Text(isEditing ? 'Update' : 'Create Issue'),
+                ),
+              ]),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildNameAutocomplete() {
+    return Autocomplete<String>(
+      key: _nameAutocompleteKey,
+      initialValue: TextEditingValue(text: _nameController.text),
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text.isEmpty)
+          return const Iterable<String>.empty();
+        return _nameOptions.where((name) =>
+            name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+      },
+      onSelected: _onNameSelected,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        controller.addListener(() {
+          if (_nameController.text != controller.text) {
+            _nameController.text = controller.text;
+          }
+        });
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: 'Name *',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            suffixIcon: const Icon(Icons.person_search, size: 20),
+          ),
+          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 300),
+              decoration: BoxDecoration(
+                color: const Color(0xFF242432),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  final computer = _computers.firstWhere(
+                      (c) => c.name == option,
+                      orElse: () =>
+                          Computer(name: '', status: '', createdByUserId: 0));
+                  return ListTile(
+                    dense: true,
+                    title: Text(option,
+                        style: const TextStyle(color: Colors.white)),
+                    subtitle: computer.empNo != null
+                        ? Text('Emp: ${computer.empNo}',
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 12))
+                        : null,
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmpNoAutocomplete() {
+    return Autocomplete<String>(
+      key: _empNoAutocompleteKey,
+      initialValue: TextEditingValue(text: _empNoController.text),
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text.isEmpty)
+          return const Iterable<String>.empty();
+        return _empNoOptions.where((empNo) =>
+            empNo.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+      },
+      onSelected: _onEmpNoSelected,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        controller.addListener(() {
+          if (_empNoController.text != controller.text) {
+            _empNoController.text = controller.text;
+          }
+        });
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: 'Employee No *',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            suffixIcon: const Icon(Icons.badge, size: 20),
+          ),
+          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 250),
+              decoration: BoxDecoration(
+                color: const Color(0xFF242432),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  final computer = _computers.firstWhere(
+                      (c) => c.empNo == option,
+                      orElse: () =>
+                          Computer(name: '', status: '', createdByUserId: 0));
+                  return ListTile(
+                    dense: true,
+                    title: Text(option,
+                        style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(computer.name,
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12)),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Text(
-        text,
-        style: TextStyle(
-          color: Colors.grey.shade400,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            ),
       ),
+    );
+  }
+
+  Widget _textField(TextEditingController controller, String label,
+      {bool required = false, int maxLines = 1}) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      validator:
+          required ? (v) => v == null || v.isEmpty ? 'Required' : null : null,
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'core/auth/auth_service.dart';
 import 'features/reports/providers/reports_provider.dart';
 import 'features/admin/providers/user_provider.dart';
+import 'features/computers/providers/computers_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'core/theme/app_theme.dart';
 
@@ -48,6 +49,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => ReportsProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => ComputersProvider()),
       ],
       child: MaterialApp(
         title: 'BARCF Reports',

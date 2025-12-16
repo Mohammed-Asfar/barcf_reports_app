@@ -10,6 +10,7 @@ import 'issue_form_screen.dart';
 import 'issue_detail_screen.dart';
 import '../services/export_service.dart';
 import '../../admin/providers/user_provider.dart';
+import '../../computers/screens/computer_list_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -27,7 +28,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   DateTime? _toDate;
 
   // Sidebar navigation
-  String _activeSection = 'dashboard'; // 'dashboard', 'reports', 'users'
+  String _activeSection = 'dashboard'; // 'dashboard', 'computers', 'users'
 
   @override
   void initState() {
@@ -265,15 +266,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Expanded(
                   child: _activeSection == 'users'
                       ? _buildUserManagementContent()
-                      : _buildReportsContent(
-                          filteredIssues,
-                          reportsProvider,
-                          user,
-                          totalIssues,
-                          resolvedCount,
-                          pendingCount,
-                          attendedByList,
-                        ),
+                      : _activeSection == 'computers'
+                          ? const ComputerListScreen()
+                          : _buildReportsContent(
+                              filteredIssues,
+                              reportsProvider,
+                              user,
+                              totalIssues,
+                              resolvedCount,
+                              pendingCount,
+                              attendedByList,
+                            ),
                 ),
               ],
             ),
@@ -320,6 +323,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
           _buildNavItem(Icons.dashboard_outlined, 'Dashboard',
               _activeSection == 'dashboard', () {
             setState(() => _activeSection = 'dashboard');
+          }),
+          _buildNavItem(Icons.computer_outlined, 'Computer List',
+              _activeSection == 'computers', () {
+            setState(() => _activeSection = 'computers');
           }),
           if (user.role == 'superadmin' || user.role == 'admin')
             _buildNavItem(Icons.people_outline, 'User Management',
@@ -437,7 +444,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Text('/', style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(width: 8),
               Text(
-                _activeSection == 'users' ? 'User Management' : 'Issue Reports',
+                _activeSection == 'users'
+                    ? 'User Management'
+                    : _activeSection == 'computers'
+                        ? 'Computer List'
+                        : 'Issue Reports',
                 style: const TextStyle(
                     color: Colors.white, fontWeight: FontWeight.w500),
               ),
