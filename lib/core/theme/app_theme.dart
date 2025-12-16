@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Dark mode colors - Deep, professional dark theme
-  static const Color primaryAccent = Color(0xFF00377e); // Vibrant Purple accent
-  static const Color secondaryAccent = Color(0xFF00377e); // Lighter purple
+  static const Color primaryAccent = Color(0xFF006466); // Vibrant Purple accent
+  static const Color secondaryAccent = Color(0xFF006466); // Lighter purple
 
   // Keep private references for internal use
   static const Color _primaryAccent = primaryAccent;
