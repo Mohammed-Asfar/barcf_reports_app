@@ -1,3 +1,4 @@
+import 'package:barcf_reports_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth/auth_service.dart';
@@ -61,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7C3AED).withOpacity(0.15),
+                        color: AppTheme.primaryAccent.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Image.asset(

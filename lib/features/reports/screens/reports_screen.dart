@@ -1,3 +1,4 @@
+import 'package:barcf_reports_app/core/theme/app_theme.dart';
 import 'package:barcf_reports_app/features/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -112,7 +113,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF7C3AED),
+              primary: AppTheme.primaryAccent,
               onPrimary: Colors.white,
               surface: Color(0xFF1A1A24),
               onSurface: Colors.white,
@@ -160,7 +161,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF7C3AED),
+              primary: AppTheme.primaryAccent,
               onPrimary: Colors.white,
               surface: Color(0xFF1A1A24),
               onSurface: Colors.white,
@@ -341,7 +342,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: const Color(0xFF7C3AED),
+                  backgroundColor: AppTheme.primaryAccent,
                   radius: 20,
                   child: Text(
                     user.username[0].toUpperCase(),
@@ -397,11 +398,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: BoxDecoration(
             color: isActive
-                ? const Color(0xFF7C3AED).withOpacity(0.1)
+                ? AppTheme.primaryAccent.withOpacity(0.1)
                 : Colors.transparent,
             border: Border(
               left: BorderSide(
-                color: isActive ? const Color(0xFF7C3AED) : Colors.transparent,
+                color: isActive ? AppTheme.primaryAccent : Colors.transparent,
                 width: 3,
               ),
             ),
@@ -410,7 +411,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               Icon(icon,
                   color:
-                      isActive ? const Color(0xFF7C3AED) : Colors.grey.shade500,
+                      isActive ? AppTheme.primaryAccent : Colors.grey.shade500,
                   size: 20),
               const SizedBox(width: 12),
               Text(
@@ -942,11 +943,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF7C3AED).withOpacity(0.1),
+                      color: AppTheme.primaryAccent.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(Icons.people,
-                        color: Color(0xFF7C3AED), size: 32),
+                        color: AppTheme.primaryAccent, size: 32),
                   ),
                   const SizedBox(width: 20),
                   const Column(

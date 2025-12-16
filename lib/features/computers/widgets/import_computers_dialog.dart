@@ -375,7 +375,7 @@ class _ImportComputersDialogState extends State<ImportComputersDialog> {
       const SizedBox(height: 24),
       ElevatedButton.icon(
           onPressed: _pickFile,
-          icon: const Icon(Icons.folder_open),
+          icon: const Icon(Icons.folder_open, color: Colors.white),
           label: const Text('Browse Files')),
     ]));
   }
