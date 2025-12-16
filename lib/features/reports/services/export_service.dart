@@ -17,6 +17,7 @@ class ExportService {
       "Date",
       "Name",
       "Emp No",
+      "Purpose",
       "Problem",
       "Issue Sorted",
       "Materials Replaced",
@@ -31,6 +32,7 @@ class ExportService {
         DateFormat('dd-MM-yyyy').format(issue.date),
         issue.name,
         issue.empNo,
+        issue.purpose,
         issue.problem,
         issue.isIssueSorted ? "Yes" : "No",
         issue.materialsReplaced ?? 'None',
@@ -119,23 +121,25 @@ class ExportService {
               cellAlignments: {
                 0: pw.Alignment.center,
                 1: pw.Alignment.center,
-                5: pw.Alignment.center,
+                6: pw.Alignment.center,
               },
               columnWidths: {
                 0: const pw.FixedColumnWidth(35), // S.No
                 1: const pw.FixedColumnWidth(70), // Date
                 2: const pw.FlexColumnWidth(1.2), // Name
                 3: const pw.FixedColumnWidth(50), // Emp No
-                4: const pw.FlexColumnWidth(2), // Problem
-                5: const pw.FixedColumnWidth(45), // Status
-                6: const pw.FlexColumnWidth(1.2), // Materials
-                7: const pw.FlexColumnWidth(1), // Attended By
+                4: const pw.FlexColumnWidth(1), // Purpose
+                5: const pw.FlexColumnWidth(2), // Problem
+                6: const pw.FixedColumnWidth(45), // Status
+                7: const pw.FlexColumnWidth(1.2), // Materials
+                8: const pw.FlexColumnWidth(1), // Attended By
               },
               headers: [
                 'S.No',
                 'Date',
                 'Name',
                 'Emp No',
+                'Purpose',
                 'Problem',
                 'Status',
                 'Materials Replaced',
@@ -147,6 +151,7 @@ class ExportService {
                         DateFormat('dd-MM-yyyy').format(issue.date),
                         issue.name,
                         issue.empNo,
+                        issue.purpose,
                         issue.problem,
                         issue.isIssueSorted ? 'Resolved' : 'Pending',
                         issue.materialsReplaced ?? 'None',

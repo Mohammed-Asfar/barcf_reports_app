@@ -3,6 +3,7 @@ class Issue {
   final int? sno;
   final String name;
   final String empNo;
+  final String purpose; // New required field
   final String problem;
   final bool isIssueSorted;
   final String? materialsReplaced;
@@ -19,6 +20,7 @@ class Issue {
     this.sno,
     required this.name,
     required this.empNo,
+    required this.purpose, // Required
     required this.problem,
     required this.isIssueSorted,
     this.materialsReplaced,
@@ -36,6 +38,7 @@ class Issue {
     int? sno,
     String? name,
     String? empNo,
+    String? purpose,
     String? problem,
     bool? isIssueSorted,
     String? materialsReplaced,
@@ -52,6 +55,7 @@ class Issue {
       sno: sno ?? this.sno,
       name: name ?? this.name,
       empNo: empNo ?? this.empNo,
+      purpose: purpose ?? this.purpose,
       problem: problem ?? this.problem,
       isIssueSorted: isIssueSorted ?? this.isIssueSorted,
       materialsReplaced: materialsReplaced ?? this.materialsReplaced,
@@ -71,6 +75,7 @@ class Issue {
       'sno': sno,
       'name': name,
       'empNo': empNo,
+      'purpose': purpose,
       'problem': problem,
       'isIssueSorted': isIssueSorted ? 1 : 0,
       'materialsReplaced': materialsReplaced,
@@ -90,6 +95,7 @@ class Issue {
       sno: map['sno'],
       name: map['name'],
       empNo: map['empNo'],
+      purpose: map['purpose'] ?? '', // Default to empty for old data
       problem: map['problem'],
       isIssueSorted: map['isIssueSorted'] == 1,
       materialsReplaced: map['materialsReplaced'],

@@ -106,6 +106,7 @@ class _ComputerListScreenState extends State<ComputerListScreen> {
                 'Emp No',
                 'Section',
                 'Room',
+                'Purpose',
                 'IP',
                 'Processor',
                 'RAM',
@@ -121,6 +122,7 @@ class _ComputerListScreenState extends State<ComputerListScreen> {
                   c.empNo ?? '-',
                   c.section ?? '-',
                   c.roomNo ?? '-',
+                  c.purpose ?? '-',
                   c.ipAddress ?? '-',
                   c.processor ?? '-',
                   c.ram ?? '-',
@@ -134,7 +136,7 @@ class _ComputerListScreenState extends State<ComputerListScreen> {
                   const pw.BoxDecoration(color: PdfColors.grey300),
               cellAlignments: {
                 0: pw.Alignment.center,
-                9: pw.Alignment.center,
+                10: pw.Alignment.center,
               },
             ),
           ],
@@ -487,6 +489,7 @@ class _ComputerListScreenState extends State<ComputerListScreen> {
           headingRowHeight: 50,
           dataRowHeight: 52,
           rowsPerPage: 25,
+          showCheckboxColumn: false, // Remove checkbox column
           availableRowsPerPage: const [10, 25, 50, 100],
           showFirstLastButtons: true,
           headingRowColor: WidgetStateProperty.all(const Color(0xFF1A1A24)),
@@ -605,7 +608,7 @@ class _ComputerDataSource extends DataTableSource {
       index: index,
       onSelectChanged: (_) => onView(c), // Row tap navigates to detail
       cells: [
-        DataCell(Text('${c.sno ?? index + 1}',
+        DataCell(Text('${index + 1}', // Auto-generated S.No (not from db)
             style: TextStyle(color: Colors.grey.shade400))),
         DataCell(
           Row(children: [
@@ -616,12 +619,10 @@ class _ComputerDataSource extends DataTableSource {
                 color: theme.primaryColor.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Center(
-                child: Text(
-                  c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-                  style: TextStyle(
-                      color: theme.primaryColor, fontWeight: FontWeight.bold),
-                ),
+              child: Icon(
+                Icons.computer,
+                size: 18,
+                color: theme.primaryColor,
               ),
             ),
             const SizedBox(width: 10),

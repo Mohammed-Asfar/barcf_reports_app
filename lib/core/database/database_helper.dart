@@ -28,7 +28,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -54,6 +54,7 @@ class DatabaseHelper {
       sno INTEGER,
       name TEXT NOT NULL,
       empNo TEXT NOT NULL,
+      purpose TEXT NOT NULL DEFAULT '',
       problem TEXT NOT NULL,
       isIssueSorted INTEGER NOT NULL,
       materialsReplaced TEXT,
@@ -126,6 +127,16 @@ class DatabaseHelper {
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Add purpose column to issues table for version 4
+    if (oldVersion < 4) {
+      try {
+        await db.execute(
+            "ALTER TABLE issues ADD COLUMN purpose TEXT NOT NULL DEFAULT ''");
+      } catch (e) {
+        // Column may already exist
+      }
+    }
+
     // Recreate computers table with new schema for any upgrade
     if (oldVersion < 3) {
       await db.execute('DROP TABLE IF EXISTS computers');

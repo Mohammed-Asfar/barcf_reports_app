@@ -20,6 +20,7 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _empNoController;
+  late TextEditingController _purposeController;
   late TextEditingController _problemController;
   late TextEditingController _materialsController;
   late TextEditingController _attendedByController;
@@ -38,6 +39,8 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.issue?.name ?? '');
     _empNoController = TextEditingController(text: widget.issue?.empNo ?? '');
+    _purposeController =
+        TextEditingController(text: widget.issue?.purpose ?? '');
     _problemController =
         TextEditingController(text: widget.issue?.problem ?? '');
     _materialsController =
@@ -65,6 +68,7 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
   void dispose() {
     _nameController.dispose();
     _empNoController.dispose();
+    _purposeController.dispose();
     _problemController.dispose();
     _materialsController.dispose();
     _attendedByController.dispose();
@@ -83,6 +87,7 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
         sno: widget.issue?.sno,
         name: _nameController.text,
         empNo: _empNoController.text,
+        purpose: _purposeController.text,
         problem: _problemController.text,
         isIssueSorted: _isIssueSorted,
         materialsReplaced: _materialsController.text.isNotEmpty
@@ -132,34 +137,66 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
       .toList()
     ..sort();
 
-  // Auto-fill emp no when name is selected
+  // Auto-fill emp no and purpose when name is selected
   void _onNameSelected(String name) {
     final computer = _computers.firstWhere(
       (c) => c.name == name,
       orElse: () => Computer(name: '', status: '', createdByUserId: 0),
     );
-    if (computer.empNo != null && computer.empNo!.isNotEmpty) {
-      setState(() {
-        _nameController.text = name;
+
+    // Get purposes available for this employee
+    final availablePurposes = _computers
+        .where((c) => c.name == name)
+        .where((c) => c.purpose != null && c.purpose!.isNotEmpty)
+        .map((c) => c.purpose!)
+        .toSet()
+        .toList();
+
+    setState(() {
+      _nameController.text = name;
+      if (computer.empNo != null && computer.empNo!.isNotEmpty) {
         _empNoController.text = computer.empNo!;
-        _empNoAutocompleteKey = UniqueKey(); // Rebuild to show new value
-      });
-    }
+        _empNoAutocompleteKey = UniqueKey();
+      }
+
+      // Reset purpose if current value isn't in available purposes for this employee
+      if (!availablePurposes.contains(_purposeController.text)) {
+        // Auto-select if only one purpose available, otherwise clear
+        _purposeController.text =
+            availablePurposes.length == 1 ? availablePurposes.first : '';
+      }
+    });
   }
 
-  // Auto-fill name when emp no is selected
+  // Auto-fill name and purpose when emp no is selected
   void _onEmpNoSelected(String empNo) {
     final computer = _computers.firstWhere(
       (c) => c.empNo == empNo,
       orElse: () => Computer(name: '', status: '', createdByUserId: 0),
     );
-    if (computer.name.isNotEmpty) {
-      setState(() {
-        _empNoController.text = empNo;
+
+    // Get purposes available for this employee
+    final availablePurposes = _computers
+        .where((c) => c.empNo == empNo)
+        .where((c) => c.purpose != null && c.purpose!.isNotEmpty)
+        .map((c) => c.purpose!)
+        .toSet()
+        .toList();
+
+    setState(() {
+      _empNoController.text = empNo;
+      if (computer.name.isNotEmpty) {
         _nameController.text = computer.name;
-        _nameAutocompleteKey = UniqueKey(); // Rebuild to show new value
-      });
-    }
+        _nameAutocompleteKey = UniqueKey();
+      }
+
+      // Reset purpose if current value isn't in available purposes for this employee
+      if (!availablePurposes.contains(_purposeController.text)) {
+        // Auto-select if only one purpose available, otherwise clear
+        _purposeController.text =
+            availablePurposes.length == 1 ? availablePurposes.first : '';
+      }
+    });
   }
 
   @override
@@ -180,6 +217,8 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
                 Expanded(child: _buildNameAutocomplete()),
                 const SizedBox(width: 16),
                 Expanded(child: _buildEmpNoAutocomplete()),
+                const SizedBox(width: 16),
+                Expanded(child: _buildPurposeDropdown()),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _textField(_attendedByController, 'Attended By *',
@@ -428,6 +467,77 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
           ),
         );
       },
+    );
+  }
+
+  // Get purpose options for the current name/empNo
+  List<String> _getPurposeOptionsForEmployee() {
+    final name = _nameController.text.trim();
+    final empNo = _empNoController.text.trim();
+
+    // Find computers matching the current name or empNo
+    final matchingComputers = _computers.where((c) =>
+        (name.isNotEmpty && c.name == name) ||
+        (empNo.isNotEmpty && c.empNo == empNo));
+
+    // Get unique purposes from matching computers
+    final purposes = matchingComputers
+        .where((c) => c.purpose != null && c.purpose!.isNotEmpty)
+        .map((c) => c.purpose!)
+        .toSet()
+        .toList();
+
+    return purposes..sort();
+  }
+
+  Widget _buildPurposeDropdown() {
+    final purposeOptions = _getPurposeOptionsForEmployee();
+
+    // If we have options, show dropdown
+    if (purposeOptions.isNotEmpty) {
+      // Ensure current value is in options or reset
+      if (!purposeOptions.contains(_purposeController.text) &&
+          _purposeController.text.isNotEmpty) {
+        // Keep the auto-filled value if it matches
+      } else if (_purposeController.text.isEmpty &&
+          purposeOptions.length == 1) {
+        // Auto-select if only one option
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _purposeController.text.isEmpty) {
+            setState(() => _purposeController.text = purposeOptions.first);
+          }
+        });
+      }
+
+      return DropdownButtonFormField<String>(
+        value: purposeOptions.contains(_purposeController.text)
+            ? _purposeController.text
+            : null,
+        decoration: InputDecoration(
+          labelText: 'Purpose *',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        items: purposeOptions
+            .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+            .toList(),
+        onChanged: (value) {
+          if (value != null) setState(() => _purposeController.text = value);
+        },
+        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+        dropdownColor: const Color(0xFF242432),
+      );
+    }
+
+    // No employee selected yet - show regular text field
+    return TextFormField(
+      controller: _purposeController,
+      decoration: InputDecoration(
+        labelText: 'Purpose *',
+        hintText: 'Select Name/Emp No first',
+        hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
     );
   }
 
