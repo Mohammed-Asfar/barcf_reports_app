@@ -3,8 +3,13 @@ import '../models/computer_model.dart';
 
 class ComputerDetailScreen extends StatelessWidget {
   final Computer computer;
+  final bool isAdmin;
 
-  const ComputerDetailScreen({super.key, required this.computer});
+  const ComputerDetailScreen({
+    super.key,
+    required this.computer,
+    this.isAdmin = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,12 +19,23 @@ class ComputerDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(computer.name),
         actions: [
+          // Edit button - visible but disabled for non-admins
           IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              // Navigate to edit - pass back to list which handles it
-              Navigator.pop(context, 'edit');
-            },
+            icon: Icon(
+              Icons.edit,
+              color: isAdmin ? null : Colors.grey.shade600,
+            ),
+            onPressed: isAdmin ? () => Navigator.pop(context, 'edit') : null,
+            tooltip: isAdmin ? 'Edit' : 'Admin only',
+          ),
+          // Delete button - visible but disabled for non-admins
+          IconButton(
+            icon: Icon(
+              Icons.delete_outline,
+              color: isAdmin ? Colors.redAccent : Colors.grey.shade600,
+            ),
+            onPressed: isAdmin ? () => Navigator.pop(context, 'delete') : null,
+            tooltip: isAdmin ? 'Delete' : 'Admin only',
           ),
         ],
       ),

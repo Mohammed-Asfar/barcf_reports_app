@@ -517,8 +517,10 @@ class _ComputerListScreenState extends State<ComputerListScreen> {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) =>
-                        ComputerDetailScreen(computer: computer)),
+                    builder: (context) => ComputerDetailScreen(
+                          computer: computer,
+                          isAdmin: isAdmin,
+                        )),
               );
               if (result == 'edit') {
                 final editResult = await Navigator.push(
@@ -528,6 +530,8 @@ class _ComputerListScreenState extends State<ComputerListScreen> {
                           ComputerFormScreen(computer: computer)),
                 );
                 if (editResult == true) _loadComputers();
+              } else if (result == 'delete') {
+                _confirmDelete(computer, provider, user);
               }
             },
             onEdit: (computer) async {
@@ -662,17 +666,23 @@ class _ComputerDataSource extends DataTableSource {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isAdmin) ...[
-          _actionIcon(Icons.edit_outlined, Colors.orange, () => onEdit(c)),
-          const SizedBox(width: 4),
-          _actionIcon(Icons.delete_outline, Colors.red, () => onDelete(c)),
-        ],
+        _actionIcon(
+          Icons.edit_outlined,
+          isAdmin ? Colors.orange : Colors.grey,
+          isAdmin ? () => onEdit(c) : null,
+        ),
+        const SizedBox(width: 4),
+        _actionIcon(
+          Icons.delete_outline,
+          isAdmin ? Colors.red : Colors.grey,
+          isAdmin ? () => onDelete(c) : null,
+        ),
       ],
     );
   }
 
-  Widget _actionIcon(
-      IconData icon, MaterialColor color, VoidCallback onPressed) {
+  Widget _actionIcon(IconData icon, Color color, VoidCallback? onPressed) {
+    final isDisabled = onPressed == null;
     return SizedBox(
       width: 28,
       height: 28,
@@ -682,8 +692,10 @@ class _ComputerDataSource extends DataTableSource {
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         style: IconButton.styleFrom(
-          foregroundColor: color.shade300,
-          backgroundColor: color.withOpacity(0.15),
+          foregroundColor: isDisabled
+              ? Colors.grey.shade600
+              : (color is MaterialColor ? color.shade300 : color),
+          backgroundColor: color.withOpacity(isDisabled ? 0.05 : 0.15),
         ),
       ),
     );

@@ -16,20 +16,12 @@ class ComputersProvider with ChangeNotifier {
     final db = await DatabaseHelper.instance.database;
     List<Map<String, dynamic>> maps;
 
-    if (role == 'superadmin' || role == 'admin') {
-      maps = await db.query(
-        'computers',
-        where: 'deletedAt IS NULL',
-        orderBy: 'name ASC',
-      );
-    } else {
-      maps = await db.query(
-        'computers',
-        where: 'createdByUserId = ? AND deletedAt IS NULL',
-        whereArgs: [userId],
-        orderBy: 'name ASC',
-      );
-    }
+    // All users can see all computers (role-based restrictions are in UI only)
+    maps = await db.query(
+      'computers',
+      where: 'deletedAt IS NULL',
+      orderBy: 'name ASC',
+    );
 
     _computers = maps.map((e) => Computer.fromMap(e)).toList();
     _isLoading = false;

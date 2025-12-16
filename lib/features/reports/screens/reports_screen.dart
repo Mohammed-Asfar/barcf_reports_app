@@ -299,16 +299,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
           // Logo
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
+            child: Column(
               children: [
                 Image.asset(
                   'assets/icon.png',
-                  width: 50,
-                  height: 50,
+                  width: 100,
+                  height: 100,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(height: 12),
                 const Text(
-                  'BARCF Reports',
+                  'BARCF PC Reports',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -1096,57 +1096,100 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add User'),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                  controller: usernameController,
-                  decoration: const InputDecoration(hintText: 'Username')),
-              const SizedBox(height: 16),
-              TextField(
-                  controller: passwordController,
-                  decoration: const InputDecoration(hintText: 'Password'),
-                  obscureText: true),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: role,
-                items: [
-                  const DropdownMenuItem(value: 'user', child: Text('User')),
-                  if (currentUserRole == 'superadmin')
-                    const DropdownMenuItem(
-                        value: 'admin', child: Text('Admin')),
-                ],
-                onChanged: (val) => role = val!,
-                decoration: const InputDecoration(hintText: 'Role'),
-              ),
-            ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add User'),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                    controller: usernameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      border: OutlineInputBorder(),
+                    )),
+                const SizedBox(height: 16),
+                TextField(
+                    controller: passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: role,
+                  items: [
+                    const DropdownMenuItem(value: 'user', child: Text('User')),
+                    if (currentUserRole == 'superadmin')
+                      const DropdownMenuItem(
+                          value: 'admin', child: Text('Admin')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() => role = val);
+                    }
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Role',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () async {
+                // Validation
+                if (usernameController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Username is required'),
+                        backgroundColor: Colors.orange),
+                  );
+                  return;
+                }
+                if (passwordController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Password is required'),
+                        backgroundColor: Colors.orange),
+                  );
+                  return;
+                }
+
+                final success =
+                    await Provider.of<UserProvider>(context, listen: false)
+                        .addUser(
+                  usernameController.text.trim(),
+                  passwordController.text,
+                  role,
+                  Provider.of<AuthService>(context, listen: false)
+                      .currentUser!
+                      .id!,
+                );
+                if (mounted) {
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success
+                          ? 'User added successfully'
+                          : 'Failed to add user'),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final success =
-                  await Provider.of<UserProvider>(context, listen: false)
-                      .addUser(
-                usernameController.text,
-                passwordController.text,
-                role,
-                Provider.of<AuthService>(context, listen: false)
-                    .currentUser!
-                    .id!,
-              );
-              if (success && mounted) Navigator.pop(context);
-            },
-            child: const Text('Add'),
-          ),
-        ],
       ),
     );
   }
