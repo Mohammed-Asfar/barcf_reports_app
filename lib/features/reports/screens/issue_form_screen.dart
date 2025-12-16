@@ -205,116 +205,152 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(isEditing ? 'Edit Issue' : 'New Issue')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sectionTitle('Basic Information'),
-              Row(children: [
-                Expanded(child: _buildNameAutocomplete()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildEmpNoAutocomplete()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildPurposeDropdown()),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _textField(_attendedByController, 'Attended By *',
-                        required: true)),
-              ]),
-              const SizedBox(height: 24),
-              _sectionTitle('Problem Details'),
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(
-                    flex: 2,
-                    child: _textField(_problemController, 'Problem *',
-                        required: true, maxLines: 3)),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: _textField(
-                        _materialsController, 'Materials Replaced',
-                        maxLines: 3)),
-              ]),
-              const SizedBox(height: 24),
-              _sectionTitle('Status & Date'),
-              Row(children: [
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Date',
-                            style: TextStyle(
-                                color: Colors.grey.shade400, fontSize: 12)),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: _pickDate,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF242432),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: Colors.white.withOpacity(0.1)),
-                            ),
-                            child: Row(children: [
-                              Icon(Icons.calendar_today,
-                                  color: Colors.grey.shade400, size: 20),
-                              const SizedBox(width: 12),
-                              Text(
-                                  DateFormat('MMM dd, yyyy')
-                                      .format(_selectedDate),
-                                  style: const TextStyle(color: Colors.white)),
-                              const Spacer(),
-                              Icon(Icons.arrow_drop_down,
-                                  color: Colors.grey.shade400),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionTitle('Basic Information'),
+                    Row(children: [
+                      Expanded(child: _buildNameAutocomplete()),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildEmpNoAutocomplete()),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildPurposeDropdown()),
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: _textField(
+                              _attendedByController, 'Attended By *',
+                              required: true)),
+                    ]),
+                    const SizedBox(height: 24),
+                    _sectionTitle('Problem Details'),
+                    Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                              flex: 2,
+                              child: _textField(_problemController, 'Problem *',
+                                  required: true, maxLines: 3)),
+                          const SizedBox(width: 16),
+                          Expanded(
+                              child: _textField(
+                                  _materialsController, 'Materials Replaced',
+                                  maxLines: 3)),
+                        ]),
+                    const SizedBox(height: 24),
+                    _sectionTitle('Status & Date'),
+                    Row(children: [
+                      Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Date',
+                                  style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12)),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: _pickDate,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF242432),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.white.withOpacity(0.1)),
+                                  ),
+                                  child: Row(children: [
+                                    Icon(Icons.calendar_today,
+                                        color: Colors.grey.shade400, size: 20),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                        DateFormat('MMM dd, yyyy')
+                                            .format(_selectedDate),
+                                        style: const TextStyle(
+                                            color: Colors.white)),
+                                    const Spacer(),
+                                    Icon(Icons.arrow_drop_down,
+                                        color: Colors.grey.shade400),
+                                  ]),
+                                ),
+                              ),
                             ]),
-                          ),
-                        ),
-                      ]),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Status',
+                                  style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12)),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF242432),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: Colors.white.withOpacity(0.1)),
+                                ),
+                                child: SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                      _isIssueSorted ? 'Resolved' : 'Pending',
+                                      style:
+                                          const TextStyle(color: Colors.white)),
+                                  value: _isIssueSorted,
+                                  onChanged: (val) =>
+                                      setState(() => _isIssueSorted = val),
+                                ),
+                              ),
+                            ]),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(child: SizedBox()),
+                    ]),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Status',
-                            style: TextStyle(
-                                color: Colors.grey.shade400, fontSize: 12)),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF242432),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color: Colors.white.withOpacity(0.1)),
-                          ),
-                          child: SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(_isIssueSorted ? 'Resolved' : 'Pending',
-                                style: const TextStyle(color: Colors.white)),
-                            value: _isIssueSorted,
-                            onChanged: (val) =>
-                                setState(() => _isIssueSorted = val),
-                          ),
-                        ),
-                      ]),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(child: SizedBox()),
-              ]),
-              const SizedBox(height: 32),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                OutlinedButton(
+              ),
+            ),
+          ),
+          // Fixed bottom button bar
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              border: Border(
+                top: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              SizedBox(
+                height: 48,
+                child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                    ),
                     child: const Text('Cancel')),
-                const SizedBox(width: 16),
-                ElevatedButton(
+              ),
+              const SizedBox(width: 16),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
                   onPressed: _isSaving ? null : _saveIssue,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                  ),
                   child: _isSaving
                       ? const SizedBox(
                           width: 20,
@@ -322,10 +358,10 @@ class _IssueFormScreenState extends State<IssueFormScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : Text(isEditing ? 'Update' : 'Create Issue'),
                 ),
-              ]),
-            ],
+              ),
+            ]),
           ),
-        ),
+        ],
       ),
     );
   }

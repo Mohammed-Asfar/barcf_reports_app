@@ -481,21 +481,39 @@ class _ImportComputersDialogState extends State<ImportComputersDialog> {
   Widget _buildFooter() {
     return Row(mainAxisAlignment: MainAxisAlignment.end, children: [
       if (_step > 1)
-        OutlinedButton(
-            onPressed: () => setState(() => _step--),
-            child: const Text('Back')),
+        SizedBox(
+          height: 44,
+          child: OutlinedButton(
+              onPressed: () => setState(() => _step--),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+              ),
+              child: const Text('Back')),
+        ),
       const SizedBox(width: 12),
       if (_step == 2)
-        ElevatedButton(
-            onPressed: _columnMapping['name'] != null
-                ? () => setState(() => _step = 3)
-                : null,
-            child: const Text('Next')),
+        SizedBox(
+          height: 44,
+          child: ElevatedButton(
+              onPressed: _columnMapping['name'] != null
+                  ? () => setState(() => _step = 3)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+              ),
+              child: const Text('Next')),
+        ),
       if (_step == 3)
-        ElevatedButton.icon(
-            onPressed: _importData,
-            icon: const Icon(Icons.upload),
-            label: const Text('Import')),
+        SizedBox(
+          height: 44,
+          child: ElevatedButton.icon(
+              onPressed: _importData,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+              ),
+              icon: const Icon(Icons.upload),
+              label: const Text('Import')),
+        ),
     ]);
   }
 }

@@ -61,24 +61,37 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ),
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final success =
-                  await Provider.of<UserProvider>(context, listen: false)
-                      .addUser(
-                usernameController.text,
-                passwordController.text,
-                role,
-                Provider.of<AuthService>(context, listen: false)
-                    .currentUser!
-                    .id!,
-              );
-              if (success && mounted) Navigator.pop(context);
-            },
-            child: const Text('Add'),
+          SizedBox(
+            height: 44,
+            child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                ),
+                child: const Text('Cancel')),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            height: 44,
+            child: FilledButton(
+              onPressed: () async {
+                final success =
+                    await Provider.of<UserProvider>(context, listen: false)
+                        .addUser(
+                  usernameController.text,
+                  passwordController.text,
+                  role,
+                  Provider.of<AuthService>(context, listen: false)
+                      .currentUser!
+                      .id!,
+                );
+                if (success && mounted) Navigator.pop(context);
+              },
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+              ),
+              child: const Text('Add'),
+            ),
           ),
         ],
       ),

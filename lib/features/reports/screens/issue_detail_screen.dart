@@ -94,6 +94,15 @@ class IssueDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Purpose Row
+                Row(
+                  children: [
+                    Expanded(
+                        child: _buildDetailCard(
+                            'Purpose', issue.purpose, Icons.work_outline)),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 // Details Grid
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
