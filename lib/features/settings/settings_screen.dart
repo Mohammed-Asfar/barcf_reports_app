@@ -366,7 +366,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Divider(height: 24),
                   _buildInfoRow('Platform', 'Windows'),
                   const Divider(height: 24),
-                  _buildInfoRow('Developed By', 'Autonomous Dev'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Developed By',
+                        style: TextStyle(color: Colors.grey.shade400),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/brand.png',
+                            width: 24,
+                            height: 24,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const SizedBox.shrink(),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Autonomous Dev',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
