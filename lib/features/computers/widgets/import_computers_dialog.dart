@@ -511,7 +511,10 @@ class _ImportComputersDialogState extends State<ImportComputersDialog> {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
               ),
-              icon: const Icon(Icons.upload),
+              icon: const Icon(
+                Icons.upload,
+                color: Colors.white,
+              ),
               label: const Text('Import')),
         ),
     ]);

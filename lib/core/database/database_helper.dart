@@ -1,37 +1,84 @@
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
+import '../settings/settings_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  static String? _currentDbPath;
 
   DatabaseHelper._init();
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('barcf_reports.db');
+    _database = await _initDB();
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
+  Future<Database> _initDB() async {
     // Initialize FFI for Windows
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
 
-    final dbPath = await getApplicationDocumentsDirectory();
-    final path = join(dbPath.path, 'BARCF_Reports', filePath);
+    // Get path from SettingsService
+    final dbPath = await SettingsService.instance.getDbFilePath();
+    _currentDbPath = dbPath;
 
     // Ensure directory exists
-    await Directory(dirname(path)).create(recursive: true);
+    await Directory(dirname(dbPath)).create(recursive: true);
 
     return await openDatabase(
-      path,
+      dbPath,
       version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
+  }
+
+  /// Reinitializes the database with a new path
+  /// Used when user changes the database location
+  Future<void> reinitialize(String newDbPath) async {
+    // Close existing database
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+
+    // Clear cached path
+    _currentDbPath = null;
+
+    // Re-initialize will pick up new path from SettingsService
+    await database;
+  }
+
+  /// Copies the database file from one location to another
+  /// Returns true if successful, false otherwise
+  Future<bool> copyDatabase(String fromPath, String toPath) async {
+    try {
+      final sourceFile = File(fromPath);
+      if (!await sourceFile.exists()) {
+        return false;
+      }
+
+      // Ensure target directory exists
+      await Directory(dirname(toPath)).create(recursive: true);
+
+      // Copy the database file
+      await sourceFile.copy(toPath);
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Gets the current database file path
+  String? get currentDbPath => _currentDbPath;
+
+  /// Checks if database exists at given path
+  Future<bool> databaseExists(String path) async {
+    return await File(path).exists();
   }
 
   Future _createDB(Database db, int version) async {
@@ -110,12 +157,7 @@ class DatabaseHelper {
     await db.execute(issueTable);
     await db.execute(computersTable);
 
-    // Seed Superadmin - Password: 'admin' (This should be hashed in production logic,
-    // but for initial seed we might need a known hash or handle it in AuthService)
-    // For now, I will insert a placeholder and let AuthService handle the first login/hashing if needed or seed a known hash.
-    // Let's assume we'll handle the hashing in the app, but for "admin" password (sha256 of 'admin'):
-    // '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'
-
+    // Seed Superadmin - Password: 'admin' (sha256 hash)
     await db.insert('users', {
       'username': 'superadmin',
       'passwordHash':
@@ -184,6 +226,8 @@ class DatabaseHelper {
     final db = _database;
     if (db != null) {
       await db.close();
+      _database = null;
+      _currentDbPath = null;
     }
   }
 }

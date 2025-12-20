@@ -4,10 +4,12 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'core/auth/auth_service.dart';
+import 'core/settings/settings_service.dart';
 import 'features/reports/providers/reports_provider.dart';
 import 'features/admin/providers/user_provider.dart';
 import 'features/computers/providers/computers_provider.dart';
 import 'features/auth/login_screen.dart';
+import 'features/setup/setup_screen.dart';
 import 'core/theme/app_theme.dart';
 
 void main() async {
@@ -55,13 +57,84 @@ class MyApp extends StatelessWidget {
         title: 'BARCF Reports',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const LoginScreen(),
+        home: const AppEntryPoint(),
         // Use builder to wrap ALL screens with WindowTitleBar
         builder: (context, child) {
           return WindowTitleBar(child: child ?? const SizedBox.shrink());
         },
       ),
     );
+  }
+}
+
+/// Entry point widget that checks first-run status and routes accordingly
+class AppEntryPoint extends StatefulWidget {
+  const AppEntryPoint({super.key});
+
+  @override
+  State<AppEntryPoint> createState() => _AppEntryPointState();
+}
+
+class _AppEntryPointState extends State<AppEntryPoint> {
+  bool _isLoading = true;
+  bool _isFirstRun = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFirstRun();
+  }
+
+  Future<void> _checkFirstRun() async {
+    final isFirstRun = await SettingsService.instance.isFirstRun();
+    setState(() {
+      _isFirstRun = isFirstRun;
+      _isLoading = false;
+    });
+  }
+
+  void _onSetupComplete() {
+    setState(() {
+      _isFirstRun = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/icon.png',
+                width: 80,
+                height: 80,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.analytics_rounded,
+                  size: 80,
+                  color: AppTheme.primaryAccent,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Loading...',
+                style: TextStyle(color: Colors.grey.shade400),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_isFirstRun) {
+      return SetupScreen(onSetupComplete: _onSetupComplete);
+    }
+
+    return const LoginScreen();
   }
 }
 

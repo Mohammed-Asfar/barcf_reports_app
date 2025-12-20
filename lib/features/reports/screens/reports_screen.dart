@@ -12,6 +12,7 @@ import 'issue_detail_screen.dart';
 import '../services/export_service.dart';
 import '../../admin/providers/user_provider.dart';
 import '../../computers/screens/computer_list_screen.dart';
+import '../../settings/settings_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -334,6 +335,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _activeSection == 'users', () {
               setState(() => _activeSection = 'users');
             }),
+          _buildNavItem(Icons.settings_outlined, 'Settings', false, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          }),
           const Spacer(),
           const Divider(color: Colors.white12),
           // User Profile
