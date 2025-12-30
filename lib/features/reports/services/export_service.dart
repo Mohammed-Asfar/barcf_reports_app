@@ -10,6 +10,10 @@ import '../models/user_model.dart';
 
 class ExportService {
   static Future<void> exportToCsv(List<Issue> issues) async {
+    // Sort issues by date ascending (oldest first, newest last)
+    final sortedIssues = List<Issue>.from(issues)
+      ..sort((a, b) => a.date.compareTo(b.date));
+
     List<List<dynamic>> rows = [];
     // Full details header
     rows.add([
@@ -26,9 +30,10 @@ class ExportService {
       "Updated At"
     ]);
 
-    for (var issue in issues) {
+    for (int i = 0; i < sortedIssues.length; i++) {
+      final issue = sortedIssues[i];
       rows.add([
-        issue.sno ?? '',
+        i + 1, // Sequential S.No starting from 1
         DateFormat('dd-MM-yyyy').format(issue.date),
         issue.name,
         issue.empNo,
@@ -64,6 +69,10 @@ class ExportService {
   }
 
   static Future<void> exportToPdf(List<Issue> issues, User user) async {
+    // Sort issues by date ascending (oldest first, newest last)
+    final sortedIssues = List<Issue>.from(issues)
+      ..sort((a, b) => a.date.compareTo(b.date));
+
     final doc = pw.Document();
 
     doc.addPage(
@@ -95,7 +104,7 @@ class ExportService {
                       pw.Text(
                           'Date: ${DateFormat('dd-MM-yyyy HH:mm').format(DateTime.now())}',
                           style: const pw.TextStyle(fontSize: 10)),
-                      pw.Text('Total Records: ${issues.length}',
+                      pw.Text('Total Records: ${sortedIssues.length}',
                           style: const pw.TextStyle(fontSize: 10)),
                     ],
                   ),
@@ -145,19 +154,21 @@ class ExportService {
                 'Materials Replaced',
                 'Attended By'
               ],
-              data: issues
-                  .map((issue) => [
-                        issue.sno?.toString() ?? '-',
-                        DateFormat('dd-MM-yyyy').format(issue.date),
-                        issue.name,
-                        issue.empNo,
-                        issue.purpose,
-                        issue.problem,
-                        issue.isIssueSorted ? 'Resolved' : 'Pending',
-                        issue.materialsReplaced ?? 'None',
-                        issue.attendedBy,
-                      ])
-                  .toList(),
+              data: sortedIssues.asMap().entries.map((entry) {
+                final index = entry.key;
+                final issue = entry.value;
+                return [
+                  (index + 1).toString(), // Sequential S.No starting from 1
+                  DateFormat('dd-MM-yyyy').format(issue.date),
+                  issue.name,
+                  issue.empNo,
+                  issue.purpose,
+                  issue.problem,
+                  issue.isIssueSorted ? 'Resolved' : 'Pending',
+                  issue.materialsReplaced ?? 'None',
+                  issue.attendedBy,
+                ];
+              }).toList(),
             ),
             pw.SizedBox(height: 20),
             // Footer summary
@@ -170,15 +181,15 @@ class ExportService {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                 children: [
-                  pw.Text('Total Issues: ${issues.length}',
+                  pw.Text('Total Issues: ${sortedIssues.length}',
                       style: pw.TextStyle(
                           fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
-                      'Resolved: ${issues.where((i) => i.isIssueSorted).length}',
+                      'Resolved: ${sortedIssues.where((i) => i.isIssueSorted).length}',
                       style: pw.TextStyle(
                           fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
-                      'Pending: ${issues.where((i) => !i.isIssueSorted).length}',
+                      'Pending: ${sortedIssues.where((i) => !i.isIssueSorted).length}',
                       style: pw.TextStyle(
                           fontSize: 10, fontWeight: pw.FontWeight.bold)),
                 ],
